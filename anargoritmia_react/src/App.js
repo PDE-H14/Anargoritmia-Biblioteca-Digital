@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigation } from "./routes/index";
 
-import { ClientLayout } from "./layouts";
+import { ClientLayout, AdminLayout } from "./layouts";
 
 export default function App() {
   return (
