@@ -4,22 +4,27 @@ import { map } from "lodash";
 import routes from "./routes";
 
 export function Navigation() {
-  console.log("routes===>", routes);
   return (
     <BrowserRouter>
       <Routes>
         {map(routes, (route, index) => {
-          <Route
-            key={index}
-            path={route.path}
-            element={
-              <route.layout>
-                <route.component />
-              </route.layout>
-            }
-          />;
+          // Asignación a variables capitalizadas
+          const Layout = route.layout;
+          const Component = route.component;
+
+          // Uso del return explícito
+          return (
+            <Route
+              key={index}
+              path={route.path}
+              element={
+                <Layout>
+                  <Component />
+                </Layout>
+              }
+            />
+          );
         })}
-        Navigation...
       </Routes>
     </BrowserRouter>
   );

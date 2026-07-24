@@ -5,4 +5,4 @@ C:\Users\pescamillah1800\Desktop\Anargoritmia\anargoritmia_django\anargoritmia> 
 
 inicio React
 
-C:\Users\pescamillah1800\Desktop\Anargoritmia\anargoritmia_react> ya                                                                                                 rn start
+C:\Users\pescamillah1800\Desktop\Anargoritmia\anargoritmia_react> yarn start
