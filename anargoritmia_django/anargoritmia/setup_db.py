@@ -1,4 +1,4 @@
-# setup_db.py
+# Inicio de la bd en Mongo
 from db import db
 from pymongo.errors import CollectionInvalid
 
