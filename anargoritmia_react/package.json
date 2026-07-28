@@ -13,6 +13,7 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.1",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.1.0",
     "sass": "^1.101.3",
     "semantic-ui-css": "^2.5.0",
     "semantic-ui-react": "^2.1.5",
