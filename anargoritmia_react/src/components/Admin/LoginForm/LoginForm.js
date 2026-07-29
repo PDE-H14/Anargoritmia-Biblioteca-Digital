@@ -41,7 +41,7 @@ export function LoginForm() {
           onChange={formik.handleChange}
           error={formik.errors.password}
         />
-        <Button type="submit" content="Iniciar sesión" primary fluid />
+        <Button type="submit" content="Entrar" primary fluid />
       </Form>
     </div>
   );
