@@ -1,0 +1,58 @@
+import React from "react";
+import { Icon, Menu } from "semantic-ui-react";
+import {Link, useLocation} from "react-router-dom"
+import { useAuth } from "../../../hooks";
+
+import "./SideMenu.scss";
+
+export function SideMenu(props) {
+
+  const { children } = props;
+    const {pathname} = useLocation();
+
+  return (
+    <div>
+      <div className="side-menu-admin">
+        <MenuLeft pathname={pathname}/>
+      </div>
+      <div className="content">{children}</div>
+    </div>
+  );
+}
+
+function MenuLeft(props) {
+
+  const { pathname } = props;
+  const {auth} = useAuth();
+
+  return (
+    <Menu fixed="left" borderless className="side" vertical>
+      <Menu.Item as={Link} to={"/admin"} active={pathname === "/admin"}>
+        <Icon name="home" />
+        <span>Recientes</span>
+      </Menu.Item>
+      <Menu.Item as={Link} to={"/admin/my-notes"} active={pathname === "/admin/my-notes"}>
+        <Icon name="book" />
+        <span>Mis notas</span>
+      </Menu.Item>
+      {auth.me?.is_staff && (
+      <Menu.Item as={Link} to={"/admin/tags"} active={pathname === "/admin/tags"}>
+        <Icon name="tags" />
+        <span>Etiquetas</span>
+      </Menu.Item>)}
+      <Menu.Item as={Link} to={"/admin/create"} active={pathname === "/admin/create"}>
+        <Icon name="edit outline" />
+        <span>Creación</span>
+      </Menu.Item>
+      {auth.me?.is_staff && (
+      <Menu.Item as={Link} to={"/admin/users"} active={pathname === "/admin/users"}>
+        <Icon name="users" />
+        <span>Usuarios</span>
+      </Menu.Item>)}
+      <Menu.Item as={Link} to={"/admin/me"} active={pathname === "/admin/me"}>
+        <Icon name="address card" />
+        <span>Mis datos</span>
+      </Menu.Item>
+    </Menu>
+  );
+}

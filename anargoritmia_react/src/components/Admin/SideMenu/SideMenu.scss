@@ -1,0 +1,61 @@
+@import "../../../scss/global.scss";
+
+.side-menu-admin {
+    .ui.menu {
+        background-color: $Gris-Anargoritmia !important;
+        color: $Blanco-Anargoritmia !important;
+        padding: 0 !important;
+        width: 250px !important;
+        overflow: hidden !important;
+        padding-top: 4em !important;
+        z-index: 99 !important;
+
+        .item {
+            display: flex !important;
+            align-items: center !important;
+            color: $Blanco-Anargoritmia !important;
+
+            &:hover {
+                background-color: $Carmesi-Anargoritmia !important;
+                box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+                -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+                -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+            }
+
+            &.active {
+                background-color: $Carmesi-Sombreado-Anargoritmia !important;
+
+                &:hover {
+                    background-color: $Carmesi-Anargoritmia !important;
+                    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+                    -webkit-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+                    -moz-box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+                }
+            }
+        }
+
+        i.icon {
+            color: $Blanco-Anargoritmia;
+            float: initial !important;
+            margin: 0 !important;
+            margin-right: 20px !important;
+        }
+
+        span {
+            color: $Blanco-Anargoritmia;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1 !important;
+            font-size: 1.1rem;
+        }
+    }
+}
+
+.content {
+    position: absolute;
+    color: $Blanco-Anargoritmia;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    width: calc(100% - 250px);
+}

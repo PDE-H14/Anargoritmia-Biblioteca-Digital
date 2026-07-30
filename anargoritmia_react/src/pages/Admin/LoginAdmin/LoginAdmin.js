@@ -7,7 +7,7 @@ export function LoginAdmin() {
   return (
     <div className="login-admin">
       <div className="login-admin__content">
-        <img src={logo} className="login-admin__logo" />
+        <img src={logo} className="login-admin__logo" alt="" />
         <h1>INICIAR SESIÓN</h1>
         <LoginForm />
       </div>

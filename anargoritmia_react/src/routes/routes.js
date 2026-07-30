@@ -1,14 +1,14 @@
 import routesAdmin from "./routes.admin";
 import routesClient from "./routes.client";
 import { Error404 } from "../pages";
-import { ClientLayout } from "../layouts";
+import { AdminLayout, SimpleLayout } from "../layouts";
 
 const routes = [
   ...routesAdmin,
   ...routesClient,
   {
     path: "*",
-    layout: ClientLayout,
+    layout: AdminLayout,
     component: Error404,
   },
 ];
