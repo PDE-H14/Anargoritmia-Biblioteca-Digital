@@ -1,0 +1,26 @@
+@import "../../../../scss/global.scss";
+
+.users-table-admin{
+    color: $Blanco-Anargoritmia !important;
+        background-color: $Gris-Anargoritmia !important;
+        border-color: $Gris-Terciario-Anargoritmia !important;
+    td {
+        &.status{
+            .icon{
+                &.close{
+                    color: $Carmesi-Interaccion-Anargoritmia !important;
+                }
+                &.check{
+                    color: $Verde-Anargoritmia !important;
+                }
+            }
+        }
+        border-color: $Gris-Terciario-Anargoritmia !important;
+    }
+
+    th{
+    color: $Blanco-Anargoritmia !important;
+        background-color: $Gris-Anargoritmia !important;
+        border-color: $Gris-Terciario-Anargoritmia !important;
+    }
+}
