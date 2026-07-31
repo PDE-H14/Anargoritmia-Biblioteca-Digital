@@ -1,9 +1,26 @@
-import React from "react"
+import React, { useEffect } from "react";
+import { Loader } from "semantic-ui-react";
 
-export function UsersAdmin(){
-    return(
-        <div>
-            <h1>Estammos en Usuarios OwO</h1>
-        </div>
-    );
+import { HeaderPage } from "../../components/Admin";
+import { useUser } from "../../hooks";
+
+export function UsersAdmin() {
+  const { loading, users, getUsers } = useUser();
+
+  useEffect(() => {
+    getUsers();
+  }, []);
+
+  return (
+    <div>
+      <HeaderPage title="Usuarios" />
+      {loading ? (
+        <Loader active inline="centered">
+          Cargando...
+        </Loader>
+      ) : (
+        <>hola</>
+      )}
+    </div>
+  );
 }
