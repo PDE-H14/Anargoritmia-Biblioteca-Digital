@@ -1,0 +1,16 @@
+@import "../../../../scss/global.scss";
+
+.add-edit-users-admin{
+    &__active, &__staff{
+        display: flex;
+        align-items: center;
+        margin-top: 20px !important;
+        margin-bottom: 20px !important;
+        .ui.checkbox{
+            margin-right: 20px !important;
+        }
+    }
+    &__submit{
+        margin-top: 50px !important;
+    }
+}

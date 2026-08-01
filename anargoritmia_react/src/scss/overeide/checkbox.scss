@@ -1,0 +1,32 @@
+@import "../colors";
+
+.ui.toggle.checkbox {
+  
+  // texto (label)
+  label,
+  .box,
+  input ~ label,
+  input ~ .box,
+  input:checked ~ label,
+  input:checked ~ .box,
+  input:focus ~ label,
+  input:focus ~ .box,
+  input:active ~ label,
+  input:active ~ .box,
+  input:focus:checked ~ label,
+  input:focus:checked ~ .box,
+  label:hover,
+  .box:hover {
+    color: $Blanco-Anargoritmia !important;
+  }
+
+  // interruptor
+  input:checked ~ label::before,
+  input:checked ~ .box::before,
+  input:focus:checked ~ label::before,
+  input:focus:checked ~ .box::before,
+  input:active:checked ~ label::before,
+  input:active:checked ~ .box::before {
+    background-color: $Carmesi-Anargoritmia !important;
+  }
+}

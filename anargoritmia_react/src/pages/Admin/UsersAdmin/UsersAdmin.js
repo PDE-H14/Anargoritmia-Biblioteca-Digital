@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Loader } from "semantic-ui-react";
 
-import { HeaderPage, UsersTable } from "../../../components/Admin";
+import {
+  HeaderPage,
+  UsersTable,
+  AddEditUsersForm,
+} from "../../../components/Admin";
 import { BasicModal } from "../../../components/Common";
 import { useUser } from "../../../hooks";
 import "./UsersAdmin.scss";
@@ -15,6 +19,12 @@ export function UsersAdmin() {
 
   const openCloseModal = () => setShowModal((prev) => !prev);
 
+  const addUser = () => {
+    setTitleModal("Nuevo usuario");
+    setContentModal(<AddEditUsersForm />);
+    openCloseModal();
+  };
+
   useEffect(() => {
     getUsers();
   }, []);
@@ -25,7 +35,7 @@ export function UsersAdmin() {
         className="users-admin-header"
         title="Usuarios"
         button1="Nuevo usuario"
-        action1={openCloseModal}
+        action1={addUser}
       />
       {loading ? (
         <Loader active inline="centered">
@@ -36,9 +46,9 @@ export function UsersAdmin() {
       )}
       <BasicModal
         onClose={openCloseModal}
-        title="titulin"
+        title={titleModal}
         show={showModal}
-        children={<h2>contenido</h2>}
+        children={contentModal}
       />
     </div>
   );

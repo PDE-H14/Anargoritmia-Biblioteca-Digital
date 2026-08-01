@@ -4,6 +4,7 @@
     border-radius: 15px !important;
     overflow: hidden !important;
     .header{
+        text-align: center;
         background-color: $Gris-Anargoritmia !important;
         color: $Blanco-Anargoritmia !important;
         border-color: $Gris-Secundario-Anargoritmia !important;
@@ -14,6 +15,7 @@
         background-color: $Gris-Anargoritmia !important;
         color: $Blanco-Anargoritmia !important;
         position: relative; 
+        padding: 10% !important;
         z-index: 0;
 
         &::before {
