@@ -52,10 +52,19 @@ function Actions(props) {
   const { user } = props;
   return (
     <Table.Cell textAlign="right">
-      <Button icon onClick={() => console.log("Editar:", user)}>
+      <Button
+        className="edit"
+        icon
+        onClick={() => console.log("Editar:", user)}
+      >
         <Icon name="pencil" />
       </Button>
-      <Button icon negative onClick={() => console.log("Editar:", user)}>
+      <Button
+        className="delete"
+        icon
+        negative
+        onClick={() => console.log("Editar:", user)}
+      >
         <Icon name="trash alternate" />
       </Button>
     </Table.Cell>

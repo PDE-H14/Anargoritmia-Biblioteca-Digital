@@ -11,7 +11,15 @@ export function HeaderPage(props) {
         <h2>{title}</h2>
       </div>
       <div>
-        {button1 && <Button positive>{button1}</Button>}
+        {button1 && (
+          <Button
+            positive
+            className={button1.replace(" ", "-")}
+            onClick={action1}
+          >
+            {button1}
+          </Button>
+        )}
         {button2 && <Button negative>{button2}</Button>}
       </div>
     </div>

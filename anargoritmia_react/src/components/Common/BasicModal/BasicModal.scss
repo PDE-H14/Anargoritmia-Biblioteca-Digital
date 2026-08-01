@@ -1,0 +1,39 @@
+@import "../../../scss/global.scss";
+
+.basic-modal{
+    border-radius: 15px !important;
+    overflow: hidden !important;
+    .header{
+        background-color: $Gris-Anargoritmia !important;
+        color: $Blanco-Anargoritmia !important;
+        border-color: $Gris-Secundario-Anargoritmia !important;
+        position: relative;
+        z-index: 1;
+    }
+    .content{
+        background-color: $Gris-Anargoritmia !important;
+        color: $Blanco-Anargoritmia !important;
+        position: relative; 
+        z-index: 0;
+
+        &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            
+            background-image: url("../../../assets/images/logoAnargoritmia.png"); 
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15; 
+            z-index: -1; 
+        }
+
+        > * {
+            position: relative;
+            z-index: 1;
+        }
+    }
+}

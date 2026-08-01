@@ -1,14 +1,6 @@
 @import "../../../scss/global.scss";
 
-.header-page-admin{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    h2 {
-        margin: 0;
-    }
-    
+.users-admin-header{
     .Nuevo-usuario{
             background-color: $Verde-Anargoritmia !important ;
             &:hover{
