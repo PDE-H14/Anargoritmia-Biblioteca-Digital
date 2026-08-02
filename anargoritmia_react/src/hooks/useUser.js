@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getMeApi, getUsersApi } from "../api/user";
+import { getMeApi, getUsersApi, createUserApi } from "../api/user";
 import { useAuth } from ".";
 
 export function useUser() {
@@ -29,5 +29,16 @@ export function useUser() {
       setError(error);
     }
   };
-  return { loading, error, users, getMe, getUsers };
+
+  const createUser = async (formValues) => {
+    try {
+      setLoading(true);
+      await createUserApi(formValues, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
+  return { loading, error, users, getMe, getUsers, createUser };
 }

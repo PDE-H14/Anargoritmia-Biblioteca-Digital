@@ -53,3 +53,25 @@ export async function getUsersApi(token) {
     throw error;
   }
 }
+
+export async function createUserApi(formValues, token) {
+  try {
+    const url = `${BASE_API}/api/usuarios/`;
+    const params = {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formValues),
+    };
+    const response = await fetch(url, params);
+    if (response.status !== 200) {
+      throw new Error("Datos incorrectos");
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
