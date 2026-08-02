@@ -7,17 +7,23 @@ import "./AddEditUsersForm.scss";
 import { useUser } from "../../../../hooks";
 
 export function AddEditUsersForm(props) {
-  const { onClose, onRefetch } = props;
+  const { onClose, onRefetch, user } = props;
 
-  const { createUser } = useUser();
+  const { createUser, updateUser } = useUser();
 
   const formik = useFormik({
-    initialValues: initialValues(),
-    validationSchema: Yup.object(newSchema()),
+    initialValues: initialValues(user),
+    validationSchema: Yup.object(user ? updateSchema() : newSchema()),
     validateOnChange: false,
     onSubmit: async (formValues) => {
       try {
-        await createUser(formValues);
+        const dataToSend = { ...formValues };
+
+        if (!dataToSend.password) {
+          delete dataToSend.password;
+        }
+        if (user) await updateUser(user.id, dataToSend);
+        else await createUser(formValues);
         onRefetch();
         onClose();
       } catch (error) {
@@ -87,22 +93,22 @@ export function AddEditUsersForm(props) {
       <Button
         className="add-edit-users-admin__submit"
         type="submit"
-        content="Crear"
+        content={user ? "Actualizar" : "Crear"}
         primary
         fluid
       />
     </Form>
   );
 }
-function initialValues() {
+function initialValues(user) {
   return {
-    email: "",
-    username: "",
-    first_name: "",
-    last_name: "",
+    email: user?.email || "",
+    username: user?.username || "",
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
     password: "",
-    is_active: true,
-    is_staff: false,
+    is_active: user?.is_active ? true : false,
+    is_staff: user?.is_staff ? true : false,
   };
 }
 function newSchema() {
@@ -112,7 +118,19 @@ function newSchema() {
     first_name: Yup.string().required("Requerido"),
     last_name: Yup.string().required("Requerido"),
     password: Yup.string().required("Requerido"),
-    is_active: Yup.boolean(),
-    is_staff: Yup.boolean(),
+    is_active: Yup.boolean().required("Requerido"),
+    is_staff: Yup.boolean().required("Requerido"),
+  };
+}
+
+function updateSchema() {
+  return {
+    email: Yup.string().email("Correo inválido").required("Requerido"),
+    username: Yup.string().required("Requerido"),
+    first_name: Yup.string(),
+    last_name: Yup.string(),
+    password: Yup.string(),
+    is_active: Yup.boolean().required("Requerido"),
+    is_staff: Yup.boolean().required("Requerido"),
   };
 }

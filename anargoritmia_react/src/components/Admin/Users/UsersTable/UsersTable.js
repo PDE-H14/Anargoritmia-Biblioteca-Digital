@@ -5,7 +5,7 @@ import { map } from "lodash";
 import "./UsersTable.scss";
 
 export function UsersTable(props) {
-  const { users } = props;
+  const { users, updateUser, onDeleteUser } = props;
   return (
     <Table className="users-table-admin">
       <Table.Header>
@@ -40,7 +40,11 @@ export function UsersTable(props) {
                 <Icon name="close" negative />
               )}
             </Table.Cell>
-            <Actions user={user} />
+            <Actions
+              user={user}
+              updateUser={updateUser}
+              onDeleteUser={onDeleteUser}
+            />
           </Table.Row>
         ))}
       </Table.Body>
@@ -49,21 +53,17 @@ export function UsersTable(props) {
 }
 
 function Actions(props) {
-  const { user } = props;
+  const { user, updateUser, onDeleteUser } = props;
   return (
     <Table.Cell textAlign="right">
-      <Button
-        className="edit"
-        icon
-        onClick={() => console.log("Editar:", user)}
-      >
+      <Button className="edit" icon onClick={() => updateUser(user)}>
         <Icon name="pencil" />
       </Button>
       <Button
         className="delete"
         icon
         negative
-        onClick={() => console.log("Editar:", user)}
+        onClick={() => onDeleteUser(user)}
       >
         <Icon name="trash alternate" />
       </Button>

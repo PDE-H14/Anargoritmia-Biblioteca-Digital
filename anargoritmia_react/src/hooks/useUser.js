@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { getMeApi, getUsersApi, createUserApi } from "../api/user";
+import {
+  getMeApi,
+  getUsersApi,
+  createUserApi,
+  updateUserApi,
+  deleteUserApi,
+} from "../api/user";
 import { useAuth } from ".";
 
 export function useUser() {
@@ -40,5 +46,36 @@ export function useUser() {
       setError(error);
     }
   };
-  return { loading, error, users, getMe, getUsers, createUser };
+
+  const updateUser = async (id, formValues) => {
+    try {
+      setLoading(true);
+      await updateUserApi(id, formValues, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
+
+  const deleteUser = async (id) => {
+    try {
+      setLoading(true);
+      await deleteUserApi(id, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
+  return {
+    loading,
+    error,
+    users,
+    getMe,
+    getUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+  };
 }

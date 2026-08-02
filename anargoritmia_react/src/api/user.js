@@ -75,3 +75,43 @@ export async function createUserApi(formValues, token) {
     throw error;
   }
 }
+export async function updateUserApi(id, formValues, token) {
+  try {
+    const url = `${BASE_API}/api/usuarios/${id}/`;
+    const params = {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formValues),
+    };
+    const response = await fetch(url, params);
+    if (response.status !== 200) {
+      throw new Error("Error al actualizar usuario");
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
+export async function deleteUserApi(id, token) {
+  try {
+    const url = `${BASE_API}/api/usuarios/${id}/`;
+    const params = {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+    const response = await fetch(url, params);
+    if (response.status !== 200) {
+      throw new Error("Error al eliminar usuario");
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}

@@ -16,7 +16,7 @@ export function UsersAdmin() {
   const [contentModal, setContentModal] = useState(null);
   const [refetch, setRefetch] = useState(false);
 
-  const { loading, users, getUsers } = useUser();
+  const { loading, users, getUsers, deleteUser } = useUser();
 
   const openCloseModal = () => setShowModal((prev) => !prev);
   const onRefetch = () => setRefetch((prev) => !prev);
@@ -29,8 +29,52 @@ export function UsersAdmin() {
     openCloseModal();
   };
 
+  const updateUser = (data) => {
+    setTitleModal("Editar usuario");
+    setContentModal(
+      <AddEditUsersForm
+        onClose={openCloseModal}
+        onRefetch={onRefetch}
+        user={data}
+      />,
+    );
+    openCloseModal();
+  };
+
+  const onDeleteUser = async (data) => {
+    const result = window.confirm(
+      `¿Eliminar usuario ${data.username} con el correo ${data.email}?`,
+    );
+    if (result) {
+      try {
+        await deleteUser(data.id);
+        onRefetch();
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
+    }
+  };
+
   useEffect(() => {
     getUsers();
+    // Con el siguiente comentario  eliminamos la advertencia
+    /*
+    Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\pages\Admin\UsersAdmin\UsersAdmin.js
+  Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+WARNING in [eslint] 
+src\pages\Admin\UsersAdmin\UsersAdmin.js
+  Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+    */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetch]);
 
   return (
@@ -46,7 +90,11 @@ export function UsersAdmin() {
           Cargando...
         </Loader>
       ) : (
-        <UsersTable users={users} />
+        <UsersTable
+          users={users}
+          updateUser={updateUser}
+          onDeleteUser={onDeleteUser}
+        />
       )}
       <BasicModal
         onClose={openCloseModal}
