@@ -87,7 +87,8 @@ El sistema utiliza una arquitectura desacoplada (*Single Page Application* + API
 
 ### Colección: `Nota` (Validador `$jsonSchema`)
 
-```json
+
+<pre><code>
 {
   "id_documento": "UUID (String v4)",
   "titulo": "String",
@@ -108,6 +109,7 @@ El sistema utiliza una arquitectura desacoplada (*Single Page Application* + API
   "es_borrador": "Boolean",
   "fecha_publicacion": "Date / Null"
 }
+</code></pre>
 🚀 Instalación y Configuración Local
 1. Clonar el repositorio y aislar el entorno
 git clone https://github.com/PDE-H14/Anargoritmia-Biblioteca-Digital.git
