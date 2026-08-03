@@ -9,8 +9,10 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
+import os
 import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_t^^%!mg7ek2ssrz_%t7g&8xli)^c^fk-xyu)!dcj-$nvb9$62'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-desarrollo')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -35,18 +37,25 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
+# Aplicaciones nativas de Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'drf_yasg',
+
+    # Librerías de terceros
+    'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
-    "corsheaders",
+    'drf_yasg',
+
+    # Módulos del proyecto Anargoritmia
     'anargoritmia',
     'usuarios',
+    'notas',
+    'categorias',
 ]
 
 MIDDLEWARE = [
@@ -111,6 +120,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        #Pruebas
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+
+        #unico
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
@@ -135,8 +149,12 @@ STATIC_URL = 'static/'
 #Usuarios
 AUTH_USER_MODEL = "usuarios.Usuario"
 
-CORS_ORIGIN_ALLOW_ALL = True
-
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 SIMPLE_JWT = {

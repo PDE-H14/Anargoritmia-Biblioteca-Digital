@@ -15,11 +15,14 @@ def generar_ficha(texto: str) -> str:
 
 class CategoriaSerializer(serializers.Serializer):
     id_categoria = serializers.CharField(read_only=True)
-    nombre = serializers.CharField(max_length=100)
-    ficha = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    nombre = serializers.CharField(max_length=100, allow_blank=False)
+    ficha = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     descripcion = serializers.CharField(required=False, allow_blank=True)
     padre_id = serializers.CharField(allow_null=True, required=False, default=None)
-    imagen_portada = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    imagen_portada = serializers.CharField(max_length=255, 
+    required=False, 
+    allow_blank=True, 
+    allow_null=True)
 
     def validate(self, attrs):
         """
@@ -33,5 +36,8 @@ class CategoriaSerializer(serializers.Serializer):
             attrs['ficha'] = generar_ficha(nombre)
         else:
             attrs['ficha'] = generar_ficha(ficha_recibida)
+
+        if attrs.get('imagen_portada') is None:
+            attrs['imagen_portada'] = ''
 
         return attrs

@@ -6,8 +6,10 @@ from rest_framework.decorators import action
 from db import db
 from .serializers import NotaSerializer
 
-class NotaViewSet(viewsets.ViewSet):
+class NotaViewSet(viewsets.GenericViewSet):
     coleccion = db['Nota']
+    lookup_field = 'id_documento'
+    serializer_class = NotaSerializer
 
     def get_permissions(self):
         """
