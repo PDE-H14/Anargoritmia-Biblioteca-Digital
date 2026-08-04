@@ -186,3 +186,15 @@ GET id
 }
 
 status 200 resultado esperado
+
+
+
+{
+"nombre": "Bienvenida",
+"ficha": "bienvenida",
+"descripcion": "Aquí podrás encontrar los recursos necesarios para poder recorrer Anargoritmia y hacer tus primeras publicaciones",
+"padre_id": null,
+"imagen_portada": null
+}
+
+01cc81af-137e-42a1-8991-1b937e69b399

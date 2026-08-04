@@ -24,20 +24,20 @@ class CategoriaSerializer(serializers.Serializer):
     allow_blank=True, 
     allow_null=True)
 
-    def validate(self, attrs):
+    def validate(self, value):
         """
         Garantiza la generación y limpieza estricta de la ficha.
         """
-        nombre = attrs.get('nombre', '')
-        ficha_recibida = attrs.get('ficha', '')
+        nombre = value.get('nombre', '')
+        ficha_recibida = value.get('ficha', '')
 
         # Si no envían ficha, la construimos desde el nombre; si la envían, la purgamos.
         if not ficha_recibida:
-            attrs['ficha'] = generar_ficha(nombre)
+            value['ficha'] = generar_ficha(nombre)
         else:
-            attrs['ficha'] = generar_ficha(ficha_recibida)
+            value['ficha'] = generar_ficha(ficha_recibida)
 
-        if attrs.get('imagen_portada') is None:
-            attrs['imagen_portada'] = ''
+        if value.get('imagen_portada') is None:
+            value['imagen_portada'] = ''
 
-        return attrs
+        return value

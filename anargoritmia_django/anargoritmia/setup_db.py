@@ -33,6 +33,10 @@ esquema_nota = {
                     "correo": {"bsonType": "string"}
                 }
             },
+            "ficha": {
+                "bsonType": "string",
+                "description": "Cadena normalizada del título para enrutamiento web y control de colisiones"
+            },
             "licencia": {
                 "bsonType": "string",
                 "enum": ["CC BY-SA 4.0"],
@@ -149,19 +153,25 @@ def inicializar_indices():
     Garantiza la unicidad a nivel de motor de base de datos para evitar colisiones.
     """
     try:
-        # Índices de unicidad para Categoría
+        # Índices únicos para la colección Categoria
         db['Categoria'].create_index("ficha", unique=True)
         db['Categoria'].create_index("id_categoria", unique=True)
         
-        # Índice de unicidad para Nota
+        # Índice único para el identificador soberano de la Nota
         db['Nota'].create_index("id_documento", unique=True)
         
-        print("Índices de unicidad creados correctamente.")
-    except DuplicateKeyError as e:
-        print(f"Error de colisión: Existen datos duplicados en la base de datos que impiden crear el índice único.\nDetalle: {e}")
+        # Índice compuesto único para la Nota:
+        db['Nota'].create_index(
+            [("ficha", 1), ("autor.id_usuario", 1)],
+            unique=True
+        )
+        
+        print("Índices de unicidad configurados con éxito en MongoDB Atlas.")
+    except Exception as e:
+        print(f"Error al inicializar índices: {e}")
 
 if __name__ == "__main__":
-    # Limpieza preventiva de datos de prueba si es entorno de desarrollo
+    # Limpieza  de datos de prueba si es entorno de desarrollo
     # db['Categoria'].delete_many({}) 
     
     inicializar_colecciones()

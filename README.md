@@ -9,7 +9,7 @@
 
 ---
 
-## 🚩 Análisis Crítico y Posicionamiento Materialista
+## 🚩 Análisis Crítico y Posicionamiento
 
 La producción científica de los estudiantes de ciencias exactas enfrenta una contradicción estructural: el **abandono académico**, la **fragmentación de los recursos de estudio** y la **expropiación burocrática del trabajo intelectual** mediante cartas de cesión de derechos. 
 

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from pymongo.errors import DuplicateKeyError
 from db import db
 from .serializers import NotaSerializer
 
@@ -35,18 +36,22 @@ class NotaViewSet(viewsets.GenericViewSet):
 
         for nota in notas_mongo:
             nota['_id'] = str(nota['_id'])
-            
-        return Response(notas_mongo, status=status.HTTP_200_OK)
 
-    def retrieve(self, request, pk=None):
+        serializer = self.get_serializer(notas_mongo, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def retrieve(self, request, id_documento=None):
         """
         Recupera una nota específica mediante su id_documento agnóstico (UUID).
         """
-        nota = self.coleccion.find_one({"id_documento": pk, "es_borrador": False})
+        
+        nota = self.coleccion.find_one({"id_documento": id_documento, "es_borrador": False})
         
         if nota:
             nota['_id'] = str(nota['_id'])
-            return Response(nota, status=status.HTTP_200_OK)
+
+            serializer = self.get_serializer(nota)
+            return Response(serializer.data, status=status.HTTP_200_OK)
             
         return Response(
             {"error": "El documento no existe o se encuentra en estado de borrador."}, 
@@ -74,7 +79,13 @@ class NotaViewSet(viewsets.GenericViewSet):
         if not datos.get('es_borrador') and not datos.get('fecha_publicacion'):
             datos['fecha_publicacion'] = datetime.now(timezone.utc)
 
-        self.coleccion.insert_one(datos)
+        try:
+            self.coleccion.insert_one(datos)
+        except DuplicateKeyError:
+            return Response(
+                {"error": "Conflicto de entidad: Ya tienes una nota registrada con este título o ficha."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         datos['_id'] = str(datos['_id'])
         return Response(datos, status=status.HTTP_201_CREATED)
@@ -83,7 +94,6 @@ class NotaViewSet(viewsets.GenericViewSet):
         """
         Actualización completa (PUT). Requiere autenticación JWT.
         """
-        
         nota = self.coleccion.find_one({"id_documento": id_documento})
         if not nota:
             return Response({"error": "El documento no existe."}, status=status.HTTP_404_NOT_FOUND)
@@ -91,13 +101,18 @@ class NotaViewSet(viewsets.GenericViewSet):
         if nota['autor']['id_usuario'] != str(request.user.id):
             return Response({"error": "No tienes permisos de edición sobre este recurso."}, status=status.HTTP_403_FORBIDDEN)
 
-        datos = request.data.copy()
+        serializer = NotaSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        datos = serializer.validated_data
         
         datos['id_documento'] = id_documento
         datos['licencia'] = "CC BY-SA 4.0"
         datos['autor'] = nota['autor']  
 
         self.coleccion.replace_one({"id_documento": id_documento}, datos)
+        
+        datos['_id'] = str(nota['_id'])
         
         return Response(datos, status=status.HTTP_200_OK)
 
@@ -115,13 +130,13 @@ class NotaViewSet(viewsets.GenericViewSet):
         self.coleccion.delete_one({"id_documento": id_documento})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def partial_update(self, request, pk=None):
+    def partial_update(self, request, id_documento=None):
         """
         Actualización parcial (PATCH). Permite modificar campos individuales.
         """
-        id_doc = pk  
+        id_doc = id_documento  
         nota = self.coleccion.find_one({"id_documento": id_doc})
-        
+            
         if not nota:
             return Response(
                 {"error": "El documento no existe en el repositorio."}, 
