@@ -8,4 +8,61 @@
     justify-content: center;
     background-color: $Gris-Anargoritmia;
     background-image: linear-gradient(315deg, $Carmesi-Anargoritmia 0%, $Gris-Anargoritmia 75%);
+    margin: 0;
+    padding: 0;
+    overflow: hidden; // Evita barras de scroll accidentales en viewports móviles
+
+    .error404 {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+
+        &__content {
+            color: $Blanco-Anargoritmia;
+            background-color: $Gris-Anargoritmia;
+            padding: 50px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px; 
+            box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.3);
+            -webkit-box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.3);
+            -moz-box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.3);
+            
+            // alinear verticalmente el contenido de la tarjeta
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            > h1 {
+                font-size: 35px;
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 20px;
+            }
+
+            > h2 {
+                font-size: 20px; 
+                text-align: center;
+                margin-bottom: 30px;
+                font-weight: normal;
+                color: darken($Blanco-Anargoritmia, 15%);
+            }
+
+            i.icon {
+                font-size: 45px;
+                color: $Blanco-Anargoritmia;
+                margin: 20px 0 0 0 !important;
+            }
+        }
+
+        &__logo {
+            width: 150px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: 30px;
+        }
+    }
 }
