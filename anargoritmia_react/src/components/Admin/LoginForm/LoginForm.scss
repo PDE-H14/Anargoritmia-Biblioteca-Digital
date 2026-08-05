@@ -1,3 +1,16 @@
-.login-form-admin{
-    
+@import "../../../scss/global.scss";
+
+.login-form {
+  .login-form-admin {
+    .login-form__inline-error.ui.negative.message {
+      background-color: rgba(138, 28, 20, 0.15); 
+      border: 1px solid $Carmesi-Anargoritmia; 
+      color: #ffcccc; 
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      text-align: center;
+      box-shadow: 0px 0px 10px rgba(138, 28, 20, 0.1);
+    }
+  }
 }

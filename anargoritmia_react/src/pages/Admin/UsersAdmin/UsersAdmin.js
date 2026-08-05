@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Loader } from "semantic-ui-react";
+import { Loader, Button } from "semantic-ui-react";
 
 import {
   HeaderPage,
@@ -41,19 +41,42 @@ export function UsersAdmin() {
     openCloseModal();
   };
 
-  const onDeleteUser = async (data) => {
-    const result = window.confirm(
-      `¿Eliminar usuario ${data.username} con el correo ${data.email}?`,
+  const onDeleteUser = (data) => {
+    setTitleModal("Confirmar eliminación");
+    setContentModal(
+      <div className="users-admin__delete-confirm">
+        <p>
+          ¿Estás seguro de que deseas eliminar al usuario{" "}
+          <strong>{data.username}</strong>?
+        </p>
+        <p className="users-admin__delete-confirm-details">
+          Esta acción purgará de forma permanente el registro asociado al correo{" "}
+          <code>{data.email}</code>. Esta operación no se puede revertir.
+        </p>
+        <div className="users-admin__delete-confirm-actions">
+          <Button onClick={openCloseModal} secondary fluid>
+            Cancelar
+          </Button>
+
+          <Button
+            onClick={async () => {
+              try {
+                await deleteUser(data.id);
+                openCloseModal(); // Cerramos el modal tras la remoción
+                onRefetch(); // Actualizamos la tabla
+              } catch (error) {
+                console.error("Error al procesar la eliminación:", error);
+              }
+            }}
+            primary
+            fluid
+          >
+            Eliminar
+          </Button>
+        </div>
+      </div>,
     );
-    if (result) {
-      try {
-        await deleteUser(data.id);
-        onRefetch();
-      } catch (error) {
-        console.log(error);
-        throw error;
-      }
-    }
+    openCloseModal();
   };
 
   useEffect(() => {

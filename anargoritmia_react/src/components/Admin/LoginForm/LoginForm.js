@@ -1,14 +1,14 @@
-import React from "react";
-import { Button, Form } from "semantic-ui-react";
+import React, { useState } from "react";
+import { Button, Form, Message } from "semantic-ui-react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { toast } from "react-toastify";
 import { loginApi } from "../../../api/user";
 import { useAuth } from "../../../hooks";
 import "./LoginForm.scss";
 
 export function LoginForm() {
   const { login } = useAuth();
+  const [errorState, setErrorState] = useState();
   const formik = useFormik({
     initialValues: initialValues(),
     validationSchema: Yup.object(validationSchema()),
@@ -19,7 +19,7 @@ export function LoginForm() {
         login(access);
         //console.log(access);
       } catch (error) {
-        toast.error(error.message);
+        setErrorState(error.message || "Usuario o contraseña incorrectos");
       }
     },
   });
@@ -41,6 +41,11 @@ export function LoginForm() {
           onChange={formik.handleChange}
           error={formik.errors.password}
         />
+        {errorState && (
+          <Message negative size="small" className="login-form__inline-error">
+            {errorState}
+          </Message>
+        )}
         <Button type="submit" content="Entrar" primary fluid />
       </Form>
     </div>

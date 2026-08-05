@@ -1,13 +1,48 @@
 @import "../../../scss/global.scss";
 
-.users-admin-header{
-    .Nuevo-usuario{
-            background-color: $Verde-Anargoritmia !important ;
-            &:hover{
+.users-admin-header {
+    .Nuevo-usuario {
+        background-color: $Verde-Anargoritmia !important;
+        &:hover {
             background-color: $Verde-Sombreado-Anargoritmia !important;
             box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
             -webkit-box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -moz-box-shadow:0px 0px  10px 0px rgba(0,0,0,0.3);
+            -moz-box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
         }
+    }
+}
+
+.users-admin__delete-confirm {
+    padding: 10px;
+    color: $Blanco-Anargoritmia;
+
+    p {
+        font-size: 16px;
+        line-height: 1.5;
+        margin-bottom: 15px;
+    }
+
+    .users-admin__delete-confirm-details {
+        font-size: 13px;
+        color: darken($Blanco-Anargoritmia, 10%);
+        background-color: rgba(255, 255, 255, 0.03);
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 3px solid $Carmesi-Anargoritmia;
+    }
+
+    code {
+      font-family: monospace;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .users-admin__delete-confirm-actions {
+        display: flex;
+        width: 100%;
+        justify-content: center; 
+        gap: 16px;
+        margin-top: 25px;
     }
 }
