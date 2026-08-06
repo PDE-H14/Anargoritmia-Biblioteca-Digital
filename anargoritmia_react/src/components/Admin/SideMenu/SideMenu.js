@@ -41,8 +41,8 @@ function MenuLeft(props) {
       {auth.me?.is_staff && (
         <Menu.Item
           as={Link}
-          to={"/admin/tags"}
-          active={pathname === "/admin/tags"}
+          to={"/admin/categories"}
+          active={pathname === "/admin/categories"}
         >
           <Icon name="tags" />
           <span>Etiquetas</span>
