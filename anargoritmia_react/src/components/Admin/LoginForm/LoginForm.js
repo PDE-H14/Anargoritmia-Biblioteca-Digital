@@ -8,7 +8,7 @@ import "./LoginForm.scss";
 
 export function LoginForm() {
   const { login } = useAuth();
-  const [errorState, setErrorState] = useState();
+  const [errorState, setErrorState] = useState(null);
   const formik = useFormik({
     initialValues: initialValues(),
     validationSchema: Yup.object(validationSchema()),

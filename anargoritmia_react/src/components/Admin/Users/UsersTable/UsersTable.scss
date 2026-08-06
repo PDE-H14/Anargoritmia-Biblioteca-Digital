@@ -1,40 +1,44 @@
 @import "../../../../scss/global.scss";
 
-.users-table-admin{
-    color: $Blanco-Anargoritmia !important;
-        background-color: $Gris-Anargoritmia !important;
-        border-color: $Gris-Terciario-Anargoritmia !important;
-    td {
-        &.status{
-            .icon{
-                &.close{
-                    color: $Carmesi-Interaccion-Anargoritmia !important;
-                }
-                &.check{
-                    color: $Verde-Anargoritmia !important;
-                }
-            }
-        }
-        border-color: $Gris-Terciario-Anargoritmia !important;
+.users-table-admin {
+  color: $Blanco-Anargoritmia !important;
+  background-color: $Gris-Anargoritmia !important;
+  border-color: $Gris-Terciario-Anargoritmia !important;
 
-        .edit{
-            background-color: $Amarillo-Anargoritmia !important ;
-            &:hover{
-            background-color: $Amarillo-Sombreado-Anargoritmia !important;
-            box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -webkit-box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -moz-box-shadow:0px 0px  10px 0px rgba(0,0,0,0.3);
+  td {
+    &.status {
+      .icon {
+        &.close {
+          color: $Carmesi-Interaccion-Anargoritmia !important;
         }
+        &.check {
+          color: $Verde-Anargoritmia !important;
         }
+      }
+    }
+    border-color: $Gris-Terciario-Anargoritmia !important;
 
-        .delete{
-            background-color: red;
-        }
+    .edit {
+      background-color: $Amarillo-Anargoritmia !important;
+      &:hover {
+        background-color: $Amarillo-Sombreado-Anargoritmia !important;
+        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+      }
     }
 
-    th{
-    color: $Blanco-Anargoritmia !important;
-        background-color: $Gris-Anargoritmia !important;
-        border-color: $Gris-Terciario-Anargoritmia !important;
+    .delete {
+      background-color: $Carmesi-Sombreado-Anargoritmia !important;
+      color: $Blanco-Anargoritmia !important;
+      &:hover {
+        background-color: $Carmesi-Anargoritmia !important;
+        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+      }
     }
+  }
+
+  th {
+    color: $Blanco-Anargoritmia !important;
+    background-color: $Gris-Anargoritmia !important;
+    border-color: $Gris-Terciario-Anargoritmia !important;
+  }
 }

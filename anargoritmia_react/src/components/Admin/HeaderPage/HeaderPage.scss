@@ -1,21 +1,48 @@
 @import "../../../scss/global.scss";
 
-.header-page-admin{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.header-page-admin {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 30px !important;
+  width: 100% !important;
 
-    h2 {
-        margin: 0;
+  h2 {
+    margin: 0 !important;
+    color: $Blanco-Anargoritmia;
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  &__btn {
+    &--success {
+      background-color: $Verde-Anargoritmia !important;
+      color: $Blanco-Anargoritmia !important;
+      &:hover {
+        background-color: $Verde-Sombreado-Anargoritmia !important;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3) !important;
+      }
     }
-    
-    .Nuevo-usuario{
-            background-color: $Verde-Anargoritmia !important ;
-            &:hover{
-            background-color: $Verde-Sombreado-Anargoritmia !important;
-            box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -webkit-box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -moz-box-shadow:0px 0px  10px 0px rgba(0,0,0,0.3);
-        }
+
+    &--warning {
+      background-color: $Amarillo-Anargoritmia !important;
+      color: $Gris-Anargoritmia !important;
+      &:hover {
+        background-color: $Amarillo-Sombreado-Anargoritmia !important;
+      }
     }
+
+    &--danger {
+      background-color: $Carmesi-Sombreado-Anargoritmia !important;
+      color: $Blanco-Anargoritmia !important;
+      &:hover {
+        background-color: $Carmesi-Anargoritmia !important;
+      }
+    }
+  }
 }

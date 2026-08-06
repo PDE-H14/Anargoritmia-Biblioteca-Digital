@@ -7,7 +7,7 @@ import {
   AddEditUsersForm,
 } from "../../../components/Admin";
 import { BasicModal } from "../../../components/Common";
-import { useUser } from "../../../hooks";
+import { useUser, useAuth } from "../../../hooks";
 import "./UsersAdmin.scss";
 
 export function UsersAdmin() {
@@ -17,6 +17,7 @@ export function UsersAdmin() {
   const [refetch, setRefetch] = useState(false);
 
   const { loading, users, getUsers, deleteUser } = useUser();
+  const { auth } = useAuth();
 
   const openCloseModal = () => setShowModal((prev) => !prev);
   const onRefetch = () => setRefetch((prev) => !prev);
@@ -42,6 +43,22 @@ export function UsersAdmin() {
   };
 
   const onDeleteUser = (data) => {
+    if (data.id === auth.me?.id) {
+      setTitleModal("Operación bloqueada");
+      setContentModal(
+        <div className="users-admin__delete-confirm">
+          <p>
+            No puedes eliminar tu propia cuenta administrativa mientras te
+            encuentres en sesión.
+          </p>
+          <Button onClick={openCloseModal} primary fluid>
+            Aceptar
+          </Button>
+        </div>,
+      );
+      openCloseModal();
+      return;
+    }
     setTitleModal("Confirmar eliminación");
     setContentModal(
       <div className="users-admin__delete-confirm">
@@ -81,32 +98,37 @@ export function UsersAdmin() {
 
   useEffect(() => {
     getUsers();
-    // Con el siguiente comentario  eliminamos la advertencia
     /*
-    Compiling...
-Compiled with warnings.
+    Con el siguiente comentario  eliminamos la advertencia
+        [eslint] 
+        src\pages\Admin\UsersAdmin\UsersAdmin.js
+          Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-[eslint] 
-src\pages\Admin\UsersAdmin\UsersAdmin.js
-  Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+        Search for the keywords to learn more about each warning.
+        To ignore, add // eslint-disable-next-line to the line before.
 
-Search for the keywords to learn more about each warning.
-To ignore, add // eslint-disable-next-line to the line before.
-
-WARNING in [eslint] 
-src\pages\Admin\UsersAdmin\UsersAdmin.js
-  Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+        WARNING in [eslint] 
+        src\pages\Admin\UsersAdmin\UsersAdmin.js
+          Line 61:6:  React Hook useEffect has a missing dependency: 'getUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
     */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refetch]);
+
+  const headerActions = [
+    {
+      label: "Nuevo usuario",
+      action: addUser,
+      variant: "success",
+      icon: "plus",
+    },
+  ];
 
   return (
     <div>
       <HeaderPage
         className="users-admin-header"
         title="Usuarios"
-        button1="Nuevo usuario"
-        action1={addUser}
+        btnActions={headerActions}
       />
       {loading ? (
         <Loader active inline="centered">

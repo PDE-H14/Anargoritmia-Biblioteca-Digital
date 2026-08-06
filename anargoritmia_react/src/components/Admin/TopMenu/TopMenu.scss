@@ -4,14 +4,30 @@
     background-color: $Gris-Anargoritmia !important;
     color: $Blanco-Anargoritmia !important;
     padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    height: 100% !important;
+    margin: 0 !important;
+    display: flex !important;
+    //align-items: center !important;
+
   &__logo {
-    width: 250px !important;
+    width: $sidebar-width-expanded !important;
     display: flex !important;
     align-items: center !important;
-    
+    height: 100% !important;
+    justify-content: flex-start !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    transition: width 0.3s ease !important;
+    padding: 0 15px !important;
+
     img {
-      margin-right: 20px !important; // Espacio entre el logo y el texto
+      margin: 0 20px 0 0 !important;
       display: block !important;
+      width: 32px !important;
+      height: auto !important;
+      transition: margin 0.3s ease !important;
     }
 
     h1 {
@@ -19,28 +35,76 @@
       margin: 0 !important; 
       padding: 0 !important;
       line-height: 1 !important; 
-      font-size: 1.4rem;
+      font-size: 1.25rem;
+      font-weight: bold !important;
+      white-space: nowrap !important;
+    }
+    &.collapsed {
+      width: $sidebar-width-collapsed !important;
+      justify-content: flex-start !important; 
+      padding: 0 0 0 15px !important; 
+      overflow: hidden !important; 
+
+      img {
+        margin: 0 !important;
+        width: 32px !important;
+      }
+      
+      h1 {
+        opacity: 0 !important;
+          transition: opacity 0.2s ease, width 0.3s ease !important;
+      }
+    }
+  }
+
+  &__toggle {
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 20px !important;
+    height: 100% !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    color: darken($Blanco-Anargoritmia, 20%) !important;
+    transition: color 0.2s ease !important;
+
+    &:hover {
+      color: $Blanco-Anargoritmia !important;
+      background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    i.icon {
+      font-size: 1.2rem !important;
+      margin: 0 !important;
     }
   }
 
   &__saludo{
     color: $Blanco-Anargoritmia !important;
+    font-size: 0.95rem !important;
   }
 
   &__logout{
-        background-color: $Carmesi-Sombreado-Anargoritmia !important;
-        margin: 0 !important;
-        &:hover{
-            background-color: $Carmesi-Anargoritmia !important;
-            box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -webkit-box-shadow: 0px 0px  10px 0px rgba(0,0,0,0.3);
-            -moz-box-shadow:0px 0px  10px 0px rgba(0,0,0,0.3);
-        }
+    cursor: pointer !important;
+    background-color: $Carmesi-Sombreado-Anargoritmia !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 20px !important;
+    margin: 0 !important;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+
+    &:hover {
+      background-color: $Carmesi-Anargoritmia !important;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5) !important;
+    }
   }
 
   i.icon{
-    margin: 0 !important;
     color: $Blanco-Anargoritmia !important;
+    font-size: 1.2rem !important;
+    margin: 0 !important;
   }
   
 }

@@ -114,7 +114,12 @@ function initialValues(user) {
 function newSchema() {
   return {
     email: Yup.string().email("Correo inválido").required("Requerido"),
-    username: Yup.string().required("Requerido"),
+    username: Yup.string()
+      .required("Requerido")
+      .matches(
+        /^[a-zA-Z0-9_@+-.]+$/,
+        "No se admiten espacios ni caracteres especiales ajenos a: _ @ + - .",
+      ),
     first_name: Yup.string().required("Requerido"),
     last_name: Yup.string().required("Requerido"),
     password: Yup.string().required("Requerido"),
@@ -126,7 +131,12 @@ function newSchema() {
 function updateSchema() {
   return {
     email: Yup.string().email("Correo inválido").required("Requerido"),
-    username: Yup.string().required("Requerido"),
+    username: Yup.string()
+      .required("Requerido")
+      .matches(
+        /^[a-zA-Z0-9_@+-.]+$/,
+        "No se admiten espacios ni caracteres especiales ajenos a: _ @ + - .",
+      ),
     first_name: Yup.string(),
     last_name: Yup.string(),
     password: Yup.string(),
