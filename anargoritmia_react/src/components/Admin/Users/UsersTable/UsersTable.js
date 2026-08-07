@@ -14,9 +14,9 @@ export function UsersTable(props) {
           <Table.HeaderCell>Correo</Table.HeaderCell>
           <Table.HeaderCell>Nombre</Table.HeaderCell>
           <Table.HeaderCell>Apellidos</Table.HeaderCell>
-          <Table.HeaderCell>Activo</Table.HeaderCell>
-          <Table.HeaderCell>Staff</Table.HeaderCell>
-          <Table.HeaderCell>Acciones</Table.HeaderCell>
+          <Table.HeaderCell textAlign="center">Activo</Table.HeaderCell>
+          <Table.HeaderCell textAlign="center">Staff</Table.HeaderCell>
+          <Table.HeaderCell textAlign="center">Acciones</Table.HeaderCell>
         </Table.Row>
       </Table.Header>
 
@@ -28,7 +28,7 @@ export function UsersTable(props) {
             <Table.Cell>{user.first_name}</Table.Cell>
             <Table.Cell>{user.last_name}</Table.Cell>
 
-            <Table.Cell className="status">
+            <Table.Cell textAlign="center" className="status">
               {user.is_active ? (
                 <Icon name="check" className="check" />
               ) : (
@@ -36,7 +36,7 @@ export function UsersTable(props) {
               )}
             </Table.Cell>
 
-            <Table.Cell className="status">
+            <Table.Cell textAlign="center" className="status">
               {user.is_staff ? (
                 <Icon name="check" className="check" />
               ) : (
@@ -59,7 +59,7 @@ export function UsersTable(props) {
 function Actions(props) {
   const { user, updateUser, onDeleteUser } = props;
   return (
-    <Table.Cell textAlign="right">
+    <Table.Cell textAlign="center">
       <Button className="edit" icon onClick={() => updateUser(user)}>
         <Icon name="pencil" />
       </Button>

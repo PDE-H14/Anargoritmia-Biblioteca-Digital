@@ -44,8 +44,8 @@ function MenuLeft(props) {
           to={"/admin/categories"}
           active={pathname === "/admin/categories"}
         >
-          <Icon name="tags" />
-          <span>Etiquetas</span>
+          <Icon name="folder" />
+          <span>Categorías</span>
         </Menu.Item>
       )}
 

@@ -1,0 +1,59 @@
+@import "../../../../scss/global.scss";
+
+.categories-table-admin {
+  color: $Blanco-Anargoritmia !important;
+  background-color: $Gris-Anargoritmia !important;
+  border-color: $Gris-Terciario-Anargoritmia !important;
+
+  .description-cell {
+    width: 500px !important;
+    min-width: 500px !important;
+    max-width: 500px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  td {
+
+    
+    .ui.image{
+        max-width: 160px;
+        max-height: 90px;
+    }
+
+    &.status {
+      .icon {
+        &.close {
+          color: $Carmesi-Interaccion-Anargoritmia !important;
+        }
+        &.check {
+          color: $Verde-Anargoritmia !important;
+        }
+      }
+    }
+    border-color: $Gris-Terciario-Anargoritmia !important;
+
+    .edit {
+      background-color: $Amarillo-Anargoritmia !important;
+      &:hover {
+        background-color: $Amarillo-Sombreado-Anargoritmia !important;
+        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    .delete {
+      background-color: $Carmesi-Sombreado-Anargoritmia !important;
+      color: $Blanco-Anargoritmia !important;
+      &:hover {
+        background-color: $Carmesi-Anargoritmia !important;
+        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3);
+      }
+    }
+  }
+
+  th {
+    color: $Blanco-Anargoritmia !important;
+    background-color: $Gris-Anargoritmia !important;
+    border-color: $Gris-Terciario-Anargoritmia !important;
+  }
+}
