@@ -1,15 +1,36 @@
 import React, { useEffect, useState } from "react";
 import { Loader } from "semantic-ui-react";
 
-import { HeaderPage, CategoriesTable } from "../../../components/Admin";
+import {
+  HeaderPage,
+  CategoriesTable,
+  AddEditCategoriesForm,
+} from "../../../components/Admin";
+import { BasicModal } from "../../../components/Common";
 import { useCategory, useAuth } from "../../../hooks";
 
 export function Categories() {
+  const [showModal, setShowModal] = useState(false);
+  const [titleModal, setTitleModal] = useState(null);
+  const [contentModal, setContentModal] = useState(null);
   const [refetch, setRefetch] = useState(false);
   const { loading, error, categories, getCategories } = useCategory();
   const { auth } = useAuth();
 
+  const openCloseModal = () => setShowModal((prev) => !prev);
   const onRefetch = () => setRefetch((prev) => !prev);
+
+  const addCategory = () => {
+    setTitleModal("Nueva categoría");
+    setContentModal(
+      <AddEditCategoriesForm
+        onClose={openCloseModal}
+        onRefetch={onRefetch}
+        categories={categories}
+      />,
+    );
+    openCloseModal();
+  };
 
   useEffect(() => {
     getCategories();
@@ -18,13 +39,12 @@ export function Categories() {
   const headerActions = [
     {
       label: "Nueva categoría",
-      action: console.log("nueva categoría"),
+      action: addCategory,
       variant: "success",
       icon: "plus",
     },
   ];
 
-  console.log(categories);
   return (
     <div>
       <HeaderPage
@@ -39,6 +59,12 @@ export function Categories() {
       ) : (
         <CategoriesTable categories={categories} />
       )}
+      <BasicModal
+        onClose={openCloseModal}
+        title={titleModal}
+        show={showModal}
+        children={contentModal}
+      />
     </div>
   );
 }

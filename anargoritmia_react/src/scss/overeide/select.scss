@@ -1,0 +1,71 @@
+@import "../colors";
+
+.ui.selection.dropdown,
+.ui.dropdown {
+  background-color: $Gris-Secundario-Anargoritmia !important;
+  color: $Blanco-Anargoritmia !important;
+  border: 1px solid $Gris-Terciario-Anargoritmia !important;
+  border-radius: 10px !important;
+
+  // Texto por defecto / Placeholder
+  .default.text {
+    color: rgba(255, 255, 255, 0.5) !important;
+  }
+
+  // Texto seleccionado o entrada de búsqueda
+  .text,
+  input.search {
+    color: $Blanco-Anargoritmia !important;
+  }
+
+  // Icono desplegable (flecha)
+  .dropdown.icon {
+    color: $Blanco-Anargoritmia !important;
+  }
+
+  // Chips o etiquetas de opciones seleccionadas (cuando multiple=true)
+  a.ui.label {
+    background-color: $Gris-Secundario-Anargoritmia !important;
+    color: $Blanco-Anargoritmia !important;
+    border-radius: 6px !important;
+
+    .delete.icon {
+      color: $Blanco-Anargoritmia !important;
+      &:hover {
+        color: $Carmesi-Interaccion-Anargoritmia !important;
+      }
+    }
+  }
+
+  // Estados activo, abierto y foco
+  &.active,
+  &:focus,
+  &.visible {
+    border: 2px solid $Blanco-Anargoritmia !important;
+    background-color: $Gris-Secundario-Anargoritmia !important;
+    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  // Menú flotante con las opciones
+  .menu {
+    background-color: $Gris-Secundario-Anargoritmia !important;
+    border: 1px solid $Gris-Terciario-Anargoritmia !important;
+    border-radius: 0 0 10px 10px !important;
+
+    .item {
+      color: $Blanco-Anargoritmia !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+
+      &:hover,
+      &.selected {
+        background-color: $Gris-Secundario-Anargoritmia !important;
+        color: $Blanco-Anargoritmia !important;
+      }
+    }
+
+    // Mensaje cuando no hay resultados
+    .message {
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
+  }
+}

@@ -1,2 +1,1 @@
-export * from "./CategoriesTable";
 export * from "./AddEditCategoriesForm";
