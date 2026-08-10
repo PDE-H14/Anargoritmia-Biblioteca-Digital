@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { getCategoriesApi, addCategoryApi } from "../api/category";
+import {
+  getCategoriesApi,
+  addCategoryApi,
+  updateCategoryApi,
+  deleteCategoryApi,
+} from "../api/category";
 import { useAuth } from ".";
 
 export function useCategory() {
@@ -32,11 +37,33 @@ export function useCategory() {
       setError(error);
     }
   };
+  const updateCategory = async (id, formValues) => {
+    try {
+      setLoading(true);
+      await updateCategoryApi(id, formValues, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
+  const deleteCategory = async (id) => {
+    try {
+      setLoading(true);
+      await deleteCategoryApi(id, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
   return {
     loading,
     error,
     categories,
     getCategories,
     addCategory,
+    updateCategory,
+    deleteCategory,
   };
 }

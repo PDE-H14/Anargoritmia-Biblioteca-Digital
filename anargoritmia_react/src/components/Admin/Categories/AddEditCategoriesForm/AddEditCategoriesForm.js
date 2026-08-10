@@ -31,11 +31,18 @@ export function AddEditCategoriesForm(props) {
     validateOnChange: false,
     onSubmit: async (formValues) => {
       try {
-        if (category) {
-          await updateCategory(category.id_categoria, formValues);
-        } else {
-          await addCategory(formValues);
+        const dataToSend = { ...formValues };
+
+        if (category && typeof dataToSend.imagen_portada === "string") {
+          delete dataToSend.imagen_portada;
         }
+
+        if (category) {
+          await updateCategory(category.id_categoria, dataToSend);
+        } else {
+          await addCategory(dataToSend);
+        }
+
         onRefetch();
         onClose();
       } catch (error) {
@@ -107,9 +114,8 @@ export function AddEditCategoriesForm(props) {
         fluid
         {...getRootProps()}
         color={formik.errors.imagen_portada ? "red" : null}
-      >
-        Subir imagen de portada
-      </Button>
+        content={previewImage ? "Cambiar imagen" : "Subir imagen de portada"}
+      />
       <input {...getInputProps()} />
 
       {formik.errors.imagen_portada && (
@@ -160,6 +166,6 @@ function updateSchema() {
     nombre: Yup.string().required("El nombre es requerido"),
     descripcion: Yup.string().required("La descripción es requerida"),
     padres: Yup.array(),
-    imagen_portada: Yup.mixed().required("La imagen es requerida"),
+    imagen_portada: Yup.mixed(),
   };
 }

@@ -1,5 +1,6 @@
 import os
 import uuid
+from urllib.parse import urlparse
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from django.core.files.storage import FileSystemStorage
@@ -86,12 +87,26 @@ class CategoriaViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = CategoriaSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         datos = serializer.validated_data
+        
+        archivo = datos.get('imagen_portada')
+        if archivo:
+            fs = FileSystemStorage()
+            extension = os.path.splitext(archivo.name)[1]
+            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
+            filename = fs.save(nombre_seguro, archivo)
+            url_relativa = fs.url(filename)
+            datos['imagen_portada'] = request.build_absolute_uri(url_relativa)
+            fs.delete() 
+        elif 'imagen_portada' in datos:
+             pass
+        else:
+             datos['imagen_portada'] = categoria.get('imagen_portada')
+        
         datos["id_categoria"] = id_categoria 
-
         self.coleccion.replace_one({"id_categoria": id_categoria}, datos)
         
         cat_actualizada = self.coleccion.find_one({"id_categoria": id_categoria})
@@ -107,12 +122,21 @@ class CategoriaViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = CategoriaSerializer(data=request.data, partial=True)
+        serializer = self.get_serializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         cambios = serializer.validated_data
         cambios.pop("id_categoria", None)
 
+        archivo = cambios.get('imagen_portada')
+        if archivo:
+            fs = FileSystemStorage()
+            extension = os.path.splitext(archivo.name)[1]
+            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
+            filename = fs.save(nombre_seguro, archivo)
+            url_relativa = fs.url(filename)
+            cambios['imagen_portada'] = request.build_absolute_uri(url_relativa)
+    
         if cambios:
             self.coleccion.update_one(
                 {"id_categoria": id_categoria},
@@ -122,7 +146,7 @@ class CategoriaViewSet(viewsets.GenericViewSet):
         categoria_actualizada = self.coleccion.find_one({"id_categoria": id_categoria})
         categoria_actualizada["_id"] = str(categoria_actualizada["_id"])
         return Response(categoria_actualizada, status=status.HTTP_200_OK)
-
+    
     # Eliminación (DELETE /api/categorias/{id_categoria}/)
     def destroy(self, request, id_categoria=None):
         categoria = self.coleccion.find_one({"id_categoria": id_categoria})
@@ -138,5 +162,15 @@ class CategoriaViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        imagen_url = categoria.get("imagen_portada")
+        if imagen_url:
+            ruta_path = urlparse(imagen_url).path
+            nombre_archivo = os.path.basename(ruta_path)
+            
+            fs = FileSystemStorage()
+            if fs.exists(nombre_archivo):
+                fs.delete(nombre_archivo)
+
         self.coleccion.delete_one({"id_categoria": id_categoria})
+        
         return Response(status=status.HTTP_204_NO_CONTENT)

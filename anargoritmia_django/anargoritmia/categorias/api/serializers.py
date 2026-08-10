@@ -18,13 +18,15 @@ class CategoriaSerializer(serializers.Serializer):
     nombre = serializers.CharField(max_length=100, allow_blank=False)
     ficha = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     descripcion = serializers.CharField(required=False, allow_blank=True)
-    padre_id = serializers.CharField(allow_null=True, required=False, default=None)
-    imagen_portada = serializers.ImageField( required=False)
+    padres = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        allow_empty=True,
+        default=list
+    )
+    imagen_portada = serializers.ImageField(required=False, allow_null=True)
 
     def validate(self, value):
-        """
-        Garantiza la generación y limpieza estricta de la ficha.
-        """
         nombre = value.get('nombre', '')
         ficha_recibida = value.get('ficha', '')
 
@@ -34,6 +36,15 @@ class CategoriaSerializer(serializers.Serializer):
             value['ficha'] = generar_ficha(ficha_recibida)
 
         if value.get('imagen_portada') is None:
-            value['imagen_portada'] = ''
+            value['imagen_portada'] = None
 
         return value
+
+    def to_representation(self, instance):
+        """
+        Sobrescribe la salida para evitar que ImageField bloquee la URL en texto
+        almacenada en MongoDB.
+        """
+        ret = super().to_representation(instance)
+        ret['imagen_portada'] = instance.get('imagen_portada')
+        return ret

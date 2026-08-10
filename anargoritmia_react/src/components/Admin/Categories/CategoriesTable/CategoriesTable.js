@@ -1,5 +1,5 @@
 import React from "react";
-import { Table, Image, Icon, Button } from "semantic-ui-react";
+import { Table, Image, Icon, Button, Label } from "semantic-ui-react";
 import { map } from "lodash";
 
 import "./CategoriesTable.scss";
@@ -7,7 +7,7 @@ import "./CategoriesTable.scss";
 import imagenNotFound from "../../../../assets/images/Imagen_No_Encontrada.png";
 
 export function CategoriesTable(props) {
-  const { categories } = props;
+  const { categories, onUpdateCategory, onDeleteCategory } = props;
 
   return (
     <Table className="categories-table-admin">
@@ -19,7 +19,7 @@ export function CategoriesTable(props) {
           <Table.HeaderCell className="description-cell">
             Descripción
           </Table.HeaderCell>
-          <Table.HeaderCell>Padres</Table.HeaderCell>
+          <Table.HeaderCell textAlign="center">Padres</Table.HeaderCell>
           <Table.HeaderCell textAlign="center">Acciones</Table.HeaderCell>
         </Table.Row>
       </Table.Header>
@@ -35,14 +35,32 @@ export function CategoriesTable(props) {
             <Table.Cell className="description-cell">
               {category.descripcion}
             </Table.Cell>
-            <Table.Cell>
-              {category.padres ? category.padres : "Raíz"}
+            <Table.Cell
+              className="parents-cell"
+              textAlign={
+                category.padres && category.padres.length > 0
+                  ? "left"
+                  : "center"
+              }
+            >
+              {category.padres && category.padres.length > 0
+                ? map(category.padres, (padre, index) => (
+                    <Label
+                      key={index}
+                      color="grey"
+                      size="small"
+                      style={{ margin: "2px" }}
+                    >
+                      {padre}
+                    </Label>
+                  ))
+                : "Raíz"}
             </Table.Cell>
 
             <Actions
               category={category}
-              updateUser={() => console.log("actualizar")}
-              onDeleteUser={() => console.log("eliminar")}
+              onUpdateCategory={onUpdateCategory}
+              onDeleteCategory={onDeleteCategory}
             />
           </Table.Row>
         ))}
@@ -52,13 +70,17 @@ export function CategoriesTable(props) {
 }
 
 function Actions(props) {
-  const { category, updateUser, onDeleteUser } = props;
+  const { category, onUpdateCategory, onDeleteCategory } = props;
   return (
     <Table.Cell textAlign="center">
-      <Button className="edit" icon onClick={() => updateUser(category)}>
+      <Button className="edit" icon onClick={() => onUpdateCategory(category)}>
         <Icon name="pencil" />
       </Button>
-      <Button className="delete" icon onClick={() => onDeleteUser(category)}>
+      <Button
+        className="delete"
+        icon
+        onClick={() => onDeleteCategory(category)}
+      >
         <Icon name="trash alternate" />
       </Button>
     </Table.Cell>
