@@ -1,5 +1,6 @@
-import React from "react";
-import { Form, Button } from "semantic-ui-react";
+import React, { useState, useCallback } from "react";
+import { Form, Button, Image, Message } from "semantic-ui-react";
+import { useDropzone } from "react-dropzone";
 import { useFormik } from "formik";
 import { map } from "lodash";
 import * as Yup from "yup";
@@ -9,7 +10,12 @@ import { useCategory } from "../../../../hooks";
 
 export function AddEditCategoriesForm(props) {
   const { onClose, onRefetch, categories, category } = props;
-  const { createCategory, updateCategory } = useCategory();
+  const { addCategory, updateCategory } = useCategory();
+
+  const [errorState, setErrorState] = useState(null);
+  const [previewImage, setPreviewImage] = useState(
+    category?.imagen_portada || null,
+  );
 
   const formatDropdownData = (data) => {
     return map(data, (cat) => ({
@@ -25,18 +31,44 @@ export function AddEditCategoriesForm(props) {
     validateOnChange: false,
     onSubmit: async (formValues) => {
       try {
-        const dataToSend = { ...formValues };
         if (category) {
-          await updateCategory(category.id_categoria, dataToSend);
+          await updateCategory(category.id_categoria, formValues);
         } else {
-          await createCategory(dataToSend);
+          await addCategory(formValues);
         }
         onRefetch();
         onClose();
       } catch (error) {
-        throw error;
+        setErrorState(error.message || "Datos inadecuados");
       }
     },
+  });
+
+  const onDrop = useCallback(
+    async (acceptedFiles) => {
+      if (acceptedFiles.length === 0) {
+        formik.setFieldError(
+          "imagen_portada",
+          "El archivo debe ser una imagen JPG o PNG.",
+        );
+        return;
+      }
+
+      const file = acceptedFiles[0];
+      setPreviewImage(URL.createObjectURL(file));
+      formik.setFieldValue("imagen_portada", file);
+    },
+    [formik],
+  );
+
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      "image/jpeg": [],
+      "image/png": [],
+    },
+    noKeyboard: true,
+    multiple: false,
+    onDrop,
   });
 
   return (
@@ -68,13 +100,32 @@ export function AddEditCategoriesForm(props) {
         error={formik.errors.padres}
         noResultsMessage="No hay más categorías disponibles"
       />
-      <Form.Input
-        name="imagen_portada"
-        placeholder="URL de Portada"
-        value={formik.values.imagen_portada}
-        onChange={formik.handleChange}
-        error={formik.errors.imagen_portada}
-      />
+
+      <Button
+        type="button"
+        secondary
+        fluid
+        {...getRootProps()}
+        color={formik.errors.imagen_portada ? "red" : null}
+      >
+        Subir imagen de portada
+      </Button>
+      <input {...getInputProps()} />
+
+      {formik.errors.imagen_portada && (
+        <Message negative size="mini">
+          {formik.errors.imagen_portada}
+        </Message>
+      )}
+
+      <Image src={previewImage} fluid />
+
+      {errorState && (
+        <Message negative size="small">
+          {errorState}
+        </Message>
+      )}
+
       <Button
         className="add-edit-users-admin__submit"
         type="submit"
@@ -100,7 +151,7 @@ function newSchema() {
     nombre: Yup.string().required("El nombre es requerido"),
     descripcion: Yup.string().required("La descripción es requerida"),
     padres: Yup.array(),
-    imagen_portada: Yup.string(),
+    imagen_portada: Yup.mixed().required("La imagen es requerida"),
   };
 }
 
@@ -109,6 +160,6 @@ function updateSchema() {
     nombre: Yup.string().required("El nombre es requerido"),
     descripcion: Yup.string().required("La descripción es requerida"),
     padres: Yup.array(),
-    imagen_portada: Yup.string(),
+    imagen_portada: Yup.mixed().required("La imagen es requerida"),
   };
 }

@@ -2814,6 +2814,11 @@ at-least-node@^1.0.0:
   resolved "https://registry.yarnpkg.com/at-least-node/-/at-least-node-1.0.0.tgz#602cd4b46e844ad4effc92a8011a3c46e0238dc2"
   integrity sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==
 
+attr-accept@^2.2.5:
+  version "2.2.5"
+  resolved "https://registry.yarnpkg.com/attr-accept/-/attr-accept-2.2.5.tgz#d7061d958e6d4f97bf8665c68b75851a0713ab5e"
+  integrity sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==
+
 autoprefixer@^10.4.13:
   version "10.5.4"
   resolved "https://registry.yarnpkg.com/autoprefixer/-/autoprefixer-10.5.4.tgz#3b7dd848b4155514a95ad1f6ce598844bea09697"
@@ -4699,6 +4704,11 @@ file-loader@^6.2.0:
   dependencies:
     loader-utils "^2.0.0"
     schema-utils "^3.0.0"
+
+file-selector@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/file-selector/-/file-selector-4.1.0.tgz#8759e5b0ef030c5cee36ea6f4b66cd9b23a40d86"
+  integrity sha512-Io1mP8CI3zec5Bxy3P3TxdrKnt35Cm8vNIHnZsvyj43l4YFjD4NRInBp240S5bDJQ0EP1jnh7nCAwXsO818OCg==
 
 filelist@^1.0.4:
   version "1.0.6"
@@ -7896,6 +7906,14 @@ react-dom@^18.3.1:
   dependencies:
     loose-envify "^1.1.0"
     scheduler "^0.23.2"
+
+react-dropzone@^20.1.0:
+  version "20.1.0"
+  resolved "https://registry.yarnpkg.com/react-dropzone/-/react-dropzone-20.1.0.tgz#16453ee120ea19d111d76015e58b89c2ddbd7c3b"
+  integrity sha512-id1t9JDYNQeFzzIfB5/C6TrpLchy29rTSDxsBH/pcxhILyv/6bSOTJwOlvUsTWXkC2GduuHIldDV6UQXNWfIuA==
+  dependencies:
+    attr-accept "^2.2.5"
+    file-selector "^4.1.0"
 
 react-error-overlay@^6.0.11:
   version "6.1.0"

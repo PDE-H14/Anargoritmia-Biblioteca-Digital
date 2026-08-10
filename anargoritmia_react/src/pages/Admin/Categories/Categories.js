@@ -7,15 +7,14 @@ import {
   AddEditCategoriesForm,
 } from "../../../components/Admin";
 import { BasicModal } from "../../../components/Common";
-import { useCategory, useAuth } from "../../../hooks";
+import { useCategory } from "../../../hooks";
 
 export function Categories() {
   const [showModal, setShowModal] = useState(false);
   const [titleModal, setTitleModal] = useState(null);
   const [contentModal, setContentModal] = useState(null);
   const [refetch, setRefetch] = useState(false);
-  const { loading, error, categories, getCategories } = useCategory();
-  const { auth } = useAuth();
+  const { loading, categories, getCategories } = useCategory();
 
   const openCloseModal = () => setShowModal((prev) => !prev);
   const onRefetch = () => setRefetch((prev) => !prev);

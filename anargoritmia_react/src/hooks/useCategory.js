@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getCategoriesApi } from "../api/category";
+import { getCategoriesApi, addCategoryApi } from "../api/category";
 import { useAuth } from ".";
 
 export function useCategory() {
@@ -20,10 +20,23 @@ export function useCategory() {
       setError(error);
     }
   };
+  const addCategory = async (data) => {
+    try {
+      setLoading(true);
+      const response = await addCategoryApi(data, auth.token);
+      setLoading(false);
+      setCategories(response);
+      return response;
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
   return {
     loading,
     error,
     categories,
     getCategories,
+    addCategory,
   };
 }

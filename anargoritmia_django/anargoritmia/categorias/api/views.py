@@ -1,6 +1,8 @@
+import os
 import uuid
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
+from django.core.files.storage import FileSystemStorage
 from db import db
 
 from .serializers import CategoriaSerializer
@@ -46,23 +48,34 @@ class CategoriaViewSet(viewsets.GenericViewSet):
         )
 
     # Creación (POST /api/categorias/)
-    def create(self, request):
-        serializer = CategoriaSerializer(data=request.data)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        datos_finales = serializer.validated_data
+        
+        archivo = datos_finales.get('imagen_portada')
+        if archivo:
+            fs = FileSystemStorage()
+            extension = os.path.splitext(archivo.name)[1]
+            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
+            filename = fs.save(nombre_seguro, archivo)
+            url_relativa = fs.url(filename)
+            datos_finales['imagen_portada'] = request.build_absolute_uri(url_relativa)
 
-        datos = serializer.validated_data
-
-        if self.coleccion.find_one({"ficha": datos['ficha']}):
+        if 'ficha' in datos_finales and self.coleccion.find_one({"ficha": datos_finales['ficha']}):
+            if archivo: 
+                fs.delete(filename) 
             return Response(
-                {"error": f"Conflicto de entidad: Ya existe una categoría registrada con la ficha '{datos['ficha']}'."},
+                {"error": f"Conflicto de entidad: Ya existe una categoría registrada con la ficha '{datos_finales['ficha']}'."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        datos["id_categoria"] = str(uuid.uuid4())
-
-        self.coleccion.insert_one(datos)
-        datos["_id"] = str(datos["_id"])
-        return Response(datos, status=status.HTTP_201_CREATED)
+        datos_finales["id_categoria"] = str(uuid.uuid4())
+        self.coleccion.insert_one(datos_finales)
+        datos_finales["_id"] = str(datos_finales["_id"])
+        
+        return Response(datos_finales, status=status.HTTP_201_CREATED)
 
     # Actualización (PUT /api/categorias/{id_categoria}/)
     def update(self, request, id_categoria=None):

@@ -19,10 +19,7 @@ class CategoriaSerializer(serializers.Serializer):
     ficha = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     descripcion = serializers.CharField(required=False, allow_blank=True)
     padre_id = serializers.CharField(allow_null=True, required=False, default=None)
-    imagen_portada = serializers.CharField(max_length=255, 
-    required=False, 
-    allow_blank=True, 
-    allow_null=True)
+    imagen_portada = serializers.ImageField( required=False)
 
     def validate(self, value):
         """
@@ -31,7 +28,6 @@ class CategoriaSerializer(serializers.Serializer):
         nombre = value.get('nombre', '')
         ficha_recibida = value.get('ficha', '')
 
-        # Si no envían ficha, la construimos desde el nombre; si la envían, la purgamos.
         if not ficha_recibida:
             value['ficha'] = generar_ficha(nombre)
         else:
