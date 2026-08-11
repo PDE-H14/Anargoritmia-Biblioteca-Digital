@@ -1,5 +1,5 @@
 import { AdminLayout } from "../layouts";
-import { HomeAdmin, UsersAdmin, Categories } from "../pages/Admin";
+import { HomeAdmin, UsersAdmin, Categories, Me } from "../pages/Admin";
 
 const routesAdmin = [
   {
@@ -16,6 +16,11 @@ const routesAdmin = [
     path: "/admin/categories",
     layout: AdminLayout,
     component: Categories,
+  },
+  {
+    path: "admin/me",
+    layout: AdminLayout,
+    component: Me,
   },
 ];
 

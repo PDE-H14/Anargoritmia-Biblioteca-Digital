@@ -79,8 +79,8 @@ export function UsersAdmin() {
             onClick={async () => {
               try {
                 await deleteUser(data.id);
-                openCloseModal(); // Cerramos el modal tras la remoción
-                onRefetch(); // Actualizamos la tabla
+                openCloseModal();
+                onRefetch();
               } catch (error) {
                 console.error("Error al procesar la eliminación:", error);
               }

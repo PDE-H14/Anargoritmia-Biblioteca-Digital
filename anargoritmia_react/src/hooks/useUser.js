@@ -16,9 +16,13 @@ export function useUser() {
 
   const getMe = async (token) => {
     try {
+      // 2. Controla el estado de carga antes y después de la petición
+      setLoading(true);
       const response = await getMeApi(token);
+      setLoading(false);
       return response;
     } catch (error) {
+      setLoading(false);
       throw error;
     }
   };
