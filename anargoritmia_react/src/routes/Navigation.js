@@ -8,11 +8,8 @@ export function Navigation() {
     <BrowserRouter>
       <Routes>
         {map(routes, (route, index) => {
-          // Asignación a variables capitalizadas
           const Layout = route.layout;
           const Component = route.component;
-
-          // Uso del return explícito
           return (
             <Route
               key={index}

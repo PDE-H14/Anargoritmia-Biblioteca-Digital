@@ -1,5 +1,5 @@
-import React from "react";
-import { Form, Button, Checkbox } from "semantic-ui-react";
+import React, { useState } from "react";
+import { Form, Button, Checkbox, Message } from "semantic-ui-react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 
@@ -10,6 +10,8 @@ export function AddEditUsersForm(props) {
   const { onClose, onRefetch, user } = props;
 
   const { createUser, updateUser } = useUser();
+
+  const [errorState, setErrorState] = useState(null);
 
   const formik = useFormik({
     initialValues: initialValues(user),
@@ -27,7 +29,27 @@ export function AddEditUsersForm(props) {
         onRefetch();
         onClose();
       } catch (error) {
-        throw error;
+        if (error.response?.data) {
+          const apiErrors = error.response.data;
+
+          const formattedError = Object.keys(apiErrors)
+            .map((field) => {
+              const fieldName =
+                field === "username"
+                  ? "Nombre de usuario"
+                  : field === "email"
+                    ? "Correo"
+                    : field;
+              return `${fieldName}: ${apiErrors[field].join(" ")}`;
+            })
+            .join(" | ");
+
+          setErrorState(formattedError);
+        } else {
+          setErrorState(
+            error.message || "No se pudo procesar la solicitud en el servidor.",
+          );
+        }
       }
     },
   });
@@ -90,6 +112,16 @@ export function AddEditUsersForm(props) {
           }}
         />
       </div>
+      {errorState && (
+        <Message
+          negative
+          size="small"
+          className="add-edit-users-admin__error-msg"
+        >
+          <Message.Header>Conflicto de integridad</Message.Header>
+          <p>{errorState}</p>
+        </Message>
+      )}
       <Button
         className="add-edit-users-admin__submit"
         type="submit"

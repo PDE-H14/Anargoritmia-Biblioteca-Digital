@@ -115,3 +115,46 @@ export async function deleteUserApi(id, token) {
     throw error;
   }
 }
+
+export async function updateMeApi(id, formValues, token) {
+  try {
+    const url = `${BASE_API}/api/auth/me/`;
+    const params = {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(formValues),
+    };
+    const response = await fetch(url, params);
+    if (response.status !== 200) {
+      throw new Error("Error al actualizar mi información");
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function deleteMeApi(id, token) {
+  try {
+    const url = `${BASE_API}/api/auth/me/`;
+    const params = {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+
+    const response = await fetch(url, params);
+    if (response.status !== 200) {
+      throw new Error("Error al eliminar usuario");
+    }
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    throw error;
+  }
+}

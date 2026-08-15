@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Loader } from "semantic-ui-react";
 import { useUser, useAuth } from "../../../hooks";
 import {
@@ -12,29 +13,35 @@ import { BasicModal } from "../../../components/Common";
 import "./Me.scss";
 
 export function Me() {
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [titleModal, setTitleModal] = useState(null);
   const [contentModal, setContentModal] = useState(null);
   const [refetch, setRefetch] = useState(false);
 
-  const { loading, getMe, deleteUser, updateUser } = useUser();
+  const { loading, getMe, deleteMe, updateMe } = useUser();
   const { auth, logout } = useAuth();
   const [userData, setUserData] = useState(null);
 
   const onRefetch = () => setRefetch((prev) => !prev);
 
   useEffect(() => {
+    if (!auth || !auth.token) {
+      return;
+    }
     (async () => {
       try {
         const response = await getMe(auth.token);
-
+        if (!response) {
+          throw new Error("El hook getMe devolvió undefined.");
+        }
         setUserData(response);
       } catch (error) {
         console.error("Fallo en la red o autorización:", error);
         setUserData(false);
       }
     })();
-  }, [refetch]);
+  }, [auth, refetch]);
 
   const openCloseModal = () => setShowModal((prev) => !prev);
 
@@ -45,7 +52,7 @@ export function Me() {
         user={userData}
         onClose={openCloseModal}
         onRefetch={onRefetch}
-        updateUser={updateUser}
+        updateUser={updateMe}
       />,
     );
     openCloseModal();
@@ -59,11 +66,16 @@ export function Me() {
         onClose={openCloseModal}
         onDelete={async () => {
           try {
-            await deleteUser(userData.id);
-            openCloseModal();
-            logout(); // Purga inmediata de tokens JWT del navegador
+            await deleteMe(); // Dispara la petición al backend
           } catch (error) {
-            console.error("Error al eliminar la cuenta:", error);
+            console.error("Error capturado tras el borrado:", error);
+          } finally {
+            // EL BLOQUE FINALLY SE EJECUTA SIEMPRE, HAYA ERROR DE JSON O NO.
+            // Si la base de datos ya aniquiló el registro, esto garantiza tu expulsión.
+            setUserData(null);
+            openCloseModal();
+            logout();
+            navigate("/admin/"); // Limpia la URL
           }
         }}
       />,

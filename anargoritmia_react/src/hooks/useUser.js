@@ -5,6 +5,8 @@ import {
   createUserApi,
   updateUserApi,
   deleteUserApi,
+  updateMeApi,
+  deleteMeApi,
 } from "../api/user";
 import { useAuth } from ".";
 
@@ -70,6 +72,30 @@ export function useUser() {
     } catch (error) {
       setLoading(false);
       setError(error);
+      throw error;
+    }
+  };
+
+  const updateMe = async (id, formValues) => {
+    try {
+      setLoading(true);
+      await updateMeApi(id, formValues, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+    }
+  };
+
+  const deleteMe = async (id) => {
+    try {
+      setLoading(true);
+      await deleteMeApi(id, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+      throw error;
     }
   };
   return {
@@ -81,5 +107,7 @@ export function useUser() {
     createUser,
     updateUser,
     deleteUser,
+    updateMe,
+    deleteMe,
   };
 }
