@@ -59,7 +59,11 @@ export function EditProfileForm({ user, onClose, onRefetch, updateUser }) {
         onChange={formik.handleChange}
         error={formik.errors.last_name}
       />
-      {errorState && <Message negative>{errorState}</Message>}
+      {errorState && (
+        <Message negative size="small" className="edit-profile-form__error-msg">
+          {errorState}
+        </Message>
+      )}
       <Button type="submit" primary fluid content="Guardar cambios" />
     </Form>
   );

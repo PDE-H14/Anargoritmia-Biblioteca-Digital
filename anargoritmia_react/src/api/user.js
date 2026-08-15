@@ -66,11 +66,21 @@ export async function createUserApi(formValues, token) {
       body: JSON.stringify(formValues),
     };
     const response = await fetch(url, params);
-    if (response.status !== 200) {
-      throw new Error("Datos incorrectos");
+
+    if (response.status !== 200 && response.status !== 201) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        errorData = { detail: "Respuesta de error no procesable." };
+      }
+      const apiError = new Error("Error en la petición a la API");
+      apiError.isApiError = true;
+      apiError.data = errorData;
+      throw apiError;
     }
-    const result = await response.json();
-    return result;
+
+    return await response.json();
   } catch (error) {
     throw error;
   }

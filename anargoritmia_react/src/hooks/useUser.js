@@ -50,6 +50,7 @@ export function useUser() {
     } catch (error) {
       setLoading(false);
       setError(error);
+      throw error;
     }
   };
 
@@ -57,17 +58,6 @@ export function useUser() {
     try {
       setLoading(true);
       await updateUserApi(id, formValues, auth.token);
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      setError(error);
-    }
-  };
-
-  const deleteUser = async (id) => {
-    try {
-      setLoading(true);
-      await deleteUserApi(id, auth.token);
       setLoading(false);
     } catch (error) {
       setLoading(false);
@@ -84,6 +74,19 @@ export function useUser() {
     } catch (error) {
       setLoading(false);
       setError(error);
+      throw error;
+    }
+  };
+
+  const deleteUser = async (id) => {
+    try {
+      setLoading(true);
+      await deleteUserApi(id, auth.token);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError(error);
+      throw error;
     }
   };
 

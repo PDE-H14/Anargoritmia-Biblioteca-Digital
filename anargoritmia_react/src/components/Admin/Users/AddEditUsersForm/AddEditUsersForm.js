@@ -29,8 +29,10 @@ export function AddEditUsersForm(props) {
         onRefetch();
         onClose();
       } catch (error) {
-        if (error.response?.data) {
-          const apiErrors = error.response.data;
+        console.dir(error);
+
+        if (error.isApiError && error.data) {
+          const apiErrors = error.data;
 
           const formattedError = Object.keys(apiErrors)
             .map((field) => {
@@ -40,7 +42,11 @@ export function AddEditUsersForm(props) {
                   : field === "email"
                     ? "Correo"
                     : field;
-              return `${fieldName}: ${apiErrors[field].join(" ")}`;
+              const errorMsg = Array.isArray(apiErrors[field])
+                ? apiErrors[field].join(" ")
+                : apiErrors[field];
+
+              return `${fieldName}: ${errorMsg}`;
             })
             .join(" | ");
 
@@ -118,7 +124,6 @@ export function AddEditUsersForm(props) {
           size="small"
           className="add-edit-users-admin__error-msg"
         >
-          <Message.Header>Conflicto de integridad</Message.Header>
           <p>{errorState}</p>
         </Message>
       )}
