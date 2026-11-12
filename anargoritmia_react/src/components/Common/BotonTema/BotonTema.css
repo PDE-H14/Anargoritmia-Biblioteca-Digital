@@ -1,0 +1,17 @@
+.boton-tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--toque);
+  height: var(--toque);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radio);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.boton-tema:hover {
+  border-color: currentColor;
+}

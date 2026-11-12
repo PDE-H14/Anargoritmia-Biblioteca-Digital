@@ -3,6 +3,11 @@ import re
 import unicodedata
 from db import db
 
+TIPOS_BLOQUE = ("texto", "codigo", "animacion")
+MAX_BLOQUES = 300
+MAX_CARACTERES_BLOQUE = 100_000
+
+
 def generar_ficha(texto: str) -> str:
     """
     Normaliza y purga una cadena de texto para generar una ficha válida para URLs:
@@ -18,104 +23,135 @@ def generar_ficha(texto: str) -> str:
 
 class AutorSerializer(serializers.Serializer):
     """
-    Serializador anidado para garantizar la integridad del subdocumento autor.
+    Subdocumento autor tal como se expone en la API.
+    El correo se guarda en la BD pero no se publica: las notas son de
+    lectura pública y no deben filtrar datos personales.
     """
     id_usuario = serializers.CharField(max_length=100)
     alias = serializers.CharField(max_length=100)
-    correo = serializers.EmailField(required=False, allow_blank=True)
 
 
-class EspacioInteractivoSerializer(serializers.Serializer):
+class BloqueSerializer(serializers.Serializer):
     """
-    Serializador para el bloque de código interactivo (JS/React/JSX).
+    Unidad atómica de una nota (al estilo de las celdas de un cuaderno):
+    - texto: Markdown con notación matemática KaTeX ($...$ y $$...$$).
+    - codigo: código fuente para lectura, con lenguaje, versión y notas de replicación.
+    - animacion: código JavaScript (Anime.js) que se ejecutará en un entorno aislado.
+    `publico` decide si el bloque aparece en la versión publicada de la nota.
     """
-    codigo_fuente = serializers.CharField(allow_blank=True, allow_null=True, required=False, default="")
-    librerias = serializers.ListField(
-        child=serializers.CharField(max_length=100),
-        allow_empty=True,
-        required=False,
-        default=list
+    id = serializers.CharField(max_length=64)
+    tipo = serializers.ChoiceField(choices=TIPOS_BLOQUE)
+    publico = serializers.BooleanField(default=False)
+    contenido = serializers.CharField(
+        allow_blank=True, default="", max_length=MAX_CARACTERES_BLOQUE, trim_whitespace=False
     )
-    parametros_iniciales = serializers.DictField(
-        required=False,
-        default=dict,
-    )
+    lenguaje = serializers.CharField(allow_blank=True, default="", max_length=50)
+    version = serializers.CharField(allow_blank=True, default="", max_length=50)
+    notas = serializers.CharField(allow_blank=True, default="", max_length=5_000)
 
 
 class NotaSerializer(serializers.Serializer):
-    id_documento = serializers.CharField(max_length=255, required=False)
-    titulo = serializers.CharField(max_length=255)
+    # Los metadatos de identidad, autoría y publicación los fija el servidor
+    id_documento = serializers.CharField(read_only=True)
     autor = AutorSerializer(read_only=True)
     ficha = serializers.CharField(read_only=True)
+    fecha_publicacion = serializers.DateTimeField(read_only=True)
+    fecha_modificacion = serializers.DateTimeField(read_only=True)
+
+    # Título y categoría pueden quedar vacíos mientras la nota sea borrador
+    titulo = serializers.CharField(max_length=255, allow_blank=True, required=False, default="")
+    id_categoria = serializers.CharField(max_length=255, allow_blank=True, required=False, default="")
     licencia = serializers.CharField(max_length=100, default="CC BY-SA 4.0")
-    id_categoria = serializers.CharField(max_length=255)
-    
     etiquetas = serializers.ListField(
         child=serializers.CharField(max_length=100),
         allow_empty=True,
         required=False,
         default=list
     )
-    
-    contenido = serializers.CharField()
-    espacio_interactivo = EspacioInteractivoSerializer(required=False, allow_null=True, default=None)
+    bloques = serializers.ListField(
+        child=BloqueSerializer(),
+        allow_empty=True,
+        required=False,
+        default=list,
+        max_length=MAX_BLOQUES,
+    )
     es_borrador = serializers.BooleanField(default=True)
-    fecha_publicacion = serializers.DateTimeField(required=False, allow_null=True)
 
     def validate_id_categoria(self, value):
-        """
-        Garantiza la integridad referencial consultando la existencia del UUID 
-        en la colección Categoria antes de permitir la inserción.
-        """
-        if value:
-            categoria_existente = db['Categoria'].find_one({"id_categoria": value})
-            if not categoria_existente:
-                raise serializers.ValidationError(
-                    "Violación de integridad: La categoría especificada no existe."
-                )
+        """Integridad referencial: la categoría, si se indica, debe existir."""
+        if value and not db['Categoria'].find_one({"id_categoria": value}):
+            raise serializers.ValidationError("La categoría especificada no existe.")
         return value
 
     def validate_licencia(self, value):
-        """
-        Garantiza la distribución bajo Copyleft CC BY-SA 4.0.
-        """
+        """Garantiza la distribución bajo Copyleft CC BY-SA 4.0."""
         if value != "CC BY-SA 4.0":
             raise serializers.ValidationError(
-                "Falla de licenciamiento: La producción científica de Anargoritmia "
-                "debe distribuirse exclusivamente bajo la licencia CC BY-SA 4.0."
+                "La producción científica de Anargoritmia debe distribuirse "
+                "exclusivamente bajo la licencia CC BY-SA 4.0."
             )
         return value
 
-    def validate(self, value):
-        titulo = value.get('titulo')
-        request = self.context.get('request')
-        
-        if titulo:
-            ficha_calculada = generar_ficha(titulo)
-            value['ficha'] = ficha_calculada
-            
-            if request and hasattr(request, 'user') and request.user.is_authenticated:
-                id_usuario = str(request.user.id)
-                
-                query = {
-                    "ficha": ficha_calculada,
-                    "autor.id_usuario": id_usuario
-                }
-                
-                # Si es en una actualización (PUT/PATCH), debemos excluir el documento actual
-                id_documento = value.get('id_documento')
-                if not id_documento and self.context.get('view'):
-                    id_documento = self.context['view'].kwargs.get('id_documento')
-                
-                if id_documento:
-                    query["id_documento"] = {"$ne": id_documento}
-                
-                if db['Nota'].find_one(query):
-                    raise serializers.ValidationError({
-                        "titulo": "Conflicto de unicidad: Ya has publicado un documento científico con este título."
-                    })
+    def validate_bloques(self, value):
+        ids = [b["id"] for b in value]
+        if len(ids) != len(set(ids)):
+            raise serializers.ValidationError("Cada bloque debe tener un identificador único.")
+        return value
 
-        if value.get('es_borrador', True):
-            value['fecha_publicacion'] = None
+    def validate(self, value):
+        # Estado final de la nota: lo almacenado + lo recibido (PATCH parcial)
+        nota_actual = self.context.get('nota') or {}
+        final = {**nota_actual, **value}
+
+        titulo = value.get('titulo')
+        if titulo is not None:
+            value['titulo'] = titulo.strip()
+            ficha = generar_ficha(value['titulo'])
+            if value['titulo'] and not ficha:
+                raise serializers.ValidationError(
+                    {"titulo": "El título debe contener al menos una letra o número."}
+                )
+            if ficha:
+                self.validar_titulo_unico(ficha)
+
+        if not final.get('es_borrador', True):
+            self.validar_publicable(final)
 
         return value
+
+    def validar_titulo_unico(self, ficha):
+        """
+        Unicidad (autor, ficha). Al editar se usa el autor original de la nota
+        (que puede no ser quien edita, p. ej. un administrador) y se excluye la
+        propia nota.
+        """
+        id_autor = self.context.get('id_autor')
+        if id_autor is None:
+            request = self.context.get('request')
+            if request is not None and request.user.is_authenticated:
+                id_autor = str(request.user.id)
+        if id_autor is None:
+            return
+
+        consulta = {"ficha": ficha, "autor.id_usuario": id_autor}
+        id_documento = self.context.get('id_documento')
+        if id_documento:
+            consulta["id_documento"] = {"$ne": id_documento}
+        if db['Nota'].find_one(consulta):
+            raise serializers.ValidationError({
+                "titulo": "Ya existe un documento de este autor con este título."
+            })
+
+    @staticmethod
+    def validar_publicable(nota):
+        """Requisitos mínimos para que una nota salga del estado de borrador."""
+        errores = {}
+        if not (nota.get('titulo') or "").strip():
+            errores["titulo"] = "Una nota publicada necesita título."
+        if not nota.get('id_categoria'):
+            errores["id_categoria"] = "Una nota publicada necesita categoría."
+        if not any(b.get('publico') and (b.get('contenido') or "").strip()
+                   for b in nota.get('bloques', [])):
+            errores["bloques"] = "Marca como público al menos un bloque con contenido."
+        if errores:
+            raise serializers.ValidationError(errores)

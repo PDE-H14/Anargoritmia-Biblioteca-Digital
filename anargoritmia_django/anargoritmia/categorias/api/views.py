@@ -4,15 +4,42 @@ from urllib.parse import urlparse
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from django.core.files.storage import FileSystemStorage
+from pymongo.errors import DuplicateKeyError
 from db import db
 
 from .serializers import CategoriaSerializer
 
+
+def guardar_imagen(archivo):
+    """Guarda el archivo con nombre aleatorio y devuelve su ruta relativa (/uploads/...)."""
+    fs = FileSystemStorage()
+    extension = os.path.splitext(archivo.name)[1].lower()
+    nombre_archivo = fs.save(f"{uuid.uuid4().hex}{extension}", archivo)
+    return fs.url(nombre_archivo)
+
+
+def borrar_imagen(url):
+    """Elimina del disco la imagen referida por una URL absoluta o relativa."""
+    if not url:
+        return
+    nombre_archivo = os.path.basename(urlparse(url).path)
+    fs = FileSystemStorage()
+    if nombre_archivo and fs.exists(nombre_archivo):
+        fs.delete(nombre_archivo)
+
+
+def error(mensaje, codigo=status.HTTP_400_BAD_REQUEST):
+    return Response({"error": mensaje}, status=codigo)
+
+
 class CategoriaViewSet(viewsets.GenericViewSet):
-    coleccion = db["Categoria"]
     lookup_field = 'id_categoria'
     serializer_class = CategoriaSerializer
-    
+
+    @property
+    def coleccion(self):
+        return db["Categoria"]
+
     def get_permissions(self):
         """
         Lectura pública para alimentar el catálogo;
@@ -22,155 +49,177 @@ class CategoriaViewSet(viewsets.GenericViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
-    # Lectura (GET /api/categorias/)
+    # ------------------------------------------------------------------ #
+    # Utilidades internas
+    # ------------------------------------------------------------------ #
+    def responder(self, documento, codigo=status.HTTP_200_OK):
+        return Response(self.get_serializer(documento).data, status=codigo)
+
+    def ficha_ocupada(self, ficha, excluir_id=None):
+        consulta = {"ficha": ficha}
+        if excluir_id:
+            consulta["id_categoria"] = {"$ne": excluir_id}
+        return self.coleccion.find_one(consulta) is not None
+
+    def validar_padres(self, padres, ficha_propia=None, ficha_anterior=None):
+        """
+        Devuelve un mensaje de error si algún padre no existe o si la asignación
+        crearía un ciclo (que la categoría termine siendo ancestro de sí misma).
+        """
+        if not padres:
+            return None
+
+        existentes = {
+            c["ficha"]: c.get("padres", [])
+            for c in self.coleccion.find({}, {"ficha": 1, "padres": 1})
+        }
+        faltantes = [p for p in padres if p not in existentes]
+        if faltantes:
+            return f"Las categorías padre no existen: {', '.join(faltantes)}."
+
+        propias = {f for f in (ficha_propia, ficha_anterior) if f}
+        if not propias:
+            return None
+
+        # Recorrido hacia arriba desde cada padre propuesto
+        pendientes, visitadas = list(padres), set()
+        while pendientes:
+            actual = pendientes.pop()
+            if actual in propias:
+                return "La jerarquía resultante tendría un ciclo: una categoría no puede ser ancestro de sí misma."
+            if actual in visitadas:
+                continue
+            visitadas.add(actual)
+            pendientes.extend(existentes.get(actual, []))
+        return None
+
+    def propagar_cambio_de_ficha(self, ficha_anterior, ficha_nueva):
+        """Mantiene las referencias de las categorías hijas cuando un padre cambia de ficha."""
+        if not (ficha_anterior and ficha_nueva) or ficha_anterior == ficha_nueva:
+            return
+        for hija in self.coleccion.find({"padres": ficha_anterior}):
+            padres = [ficha_nueva if p == ficha_anterior else p for p in hija["padres"]]
+            self.coleccion.update_one(
+                {"id_categoria": hija["id_categoria"]}, {"$set": {"padres": padres}}
+            )
+
+    # ------------------------------------------------------------------ #
+    # Lectura
+    # ------------------------------------------------------------------ #
+    # GET /api/categorias/
     def list(self, request):
-        categorias_mongo = list(self.coleccion.find({}))
-        
-        for categoria in categorias_mongo:
-            categoria["_id"] = str(categoria["_id"])
-            
-        # Pasa los datos por el serializador con many=True
-        serializer = self.get_serializer(categorias_mongo, many=True)
+        categorias = list(self.coleccion.find({}, {"_id": 0}))
+        serializer = self.get_serializer(categorias, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # Lectura individual (GET /api/categorias/{id_categoria}/)
+    # GET /api/categorias/{id_categoria}/
     def retrieve(self, request, id_categoria=None):
-        categoria = self.coleccion.find_one({"id_categoria": id_categoria})
-        
-        if categoria:
-            categoria["_id"] = str(categoria["_id"])
-            # Pasa el documento individual por el serializador
-            serializer = self.get_serializer(categoria)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        categoria = self.coleccion.find_one({"id_categoria": id_categoria}, {"_id": 0})
+        if not categoria:
+            return error("La categoría solicitada no existe.", status.HTTP_404_NOT_FOUND)
+        return self.responder(categoria)
 
-        return Response(
-            {"error": "La categoría solicitada no existe."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Creación (POST /api/categorias/)
+    # ------------------------------------------------------------------ #
+    # Escritura
+    # ------------------------------------------------------------------ #
+    # POST /api/categorias/
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        datos_finales = serializer.validated_data
-        
-        archivo = datos_finales.get('imagen_portada')
-        if archivo:
-            fs = FileSystemStorage()
-            extension = os.path.splitext(archivo.name)[1]
-            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
-            filename = fs.save(nombre_seguro, archivo)
-            url_relativa = fs.url(filename)
-            datos_finales['imagen_portada'] = request.build_absolute_uri(url_relativa)
+        datos = dict(serializer.validated_data)
 
-        if 'ficha' in datos_finales and self.coleccion.find_one({"ficha": datos_finales['ficha']}):
-            if archivo: 
-                fs.delete(filename) 
-            return Response(
-                {"error": f"Conflicto de entidad: Ya existe una categoría registrada con la ficha '{datos_finales['ficha']}'."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        if self.ficha_ocupada(datos["ficha"]):
+            return error(f"Ya existe una categoría registrada con la ficha '{datos['ficha']}'.")
 
-        datos_finales["id_categoria"] = str(uuid.uuid4())
-        self.coleccion.insert_one(datos_finales)
-        datos_finales["_id"] = str(datos_finales["_id"])
-        
-        return Response(datos_finales, status=status.HTTP_201_CREATED)
+        mensaje = self.validar_padres(datos.get("padres"))
+        if mensaje:
+            return error(mensaje)
 
-    # Actualización (PUT /api/categorias/{id_categoria}/)
+        archivo = datos.pop("imagen_portada", None)
+        datos["imagen_portada"] = guardar_imagen(archivo) if archivo else None
+        datos.setdefault("descripcion", "")
+        datos["id_categoria"] = str(uuid.uuid4())
+
+        try:
+            self.coleccion.insert_one(datos)
+        except DuplicateKeyError:
+            borrar_imagen(datos["imagen_portada"])
+            return error(f"Ya existe una categoría registrada con la ficha '{datos['ficha']}'.")
+
+        datos.pop("_id", None)
+        return self.responder(datos, status.HTTP_201_CREATED)
+
+    # PUT /api/categorias/{id_categoria}/
     def update(self, request, id_categoria=None):
-        categoria = self.coleccion.find_one({"id_categoria": id_categoria})
-        if not categoria:
-            return Response(
-                {"error": "La categoría solicitada no existe."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        """
+        Reemplazo completo de nombre, descripción y padres.
+        Si no se envía una imagen nueva se conserva la actual.
+        """
+        return self.actualizar(request, id_categoria, parcial=False)
 
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        datos = serializer.validated_data
-        
-        archivo = datos.get('imagen_portada')
-        if archivo:
-            fs = FileSystemStorage()
-            extension = os.path.splitext(archivo.name)[1]
-            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
-            filename = fs.save(nombre_seguro, archivo)
-            url_relativa = fs.url(filename)
-            datos['imagen_portada'] = request.build_absolute_uri(url_relativa)
-            fs.delete() 
-        elif 'imagen_portada' in datos:
-             pass
-        else:
-             datos['imagen_portada'] = categoria.get('imagen_portada')
-        
-        datos["id_categoria"] = id_categoria 
-        self.coleccion.replace_one({"id_categoria": id_categoria}, datos)
-        
-        cat_actualizada = self.coleccion.find_one({"id_categoria": id_categoria})
-        cat_actualizada["_id"] = str(cat_actualizada["_id"])
-        return Response(cat_actualizada, status=status.HTTP_200_OK)
-
-    # Actualización parcial (PATCH /api/categorias/{id_categoria}/)
+    # PATCH /api/categorias/{id_categoria}/
     def partial_update(self, request, id_categoria=None):
+        """Solo modifica los campos enviados."""
+        return self.actualizar(request, id_categoria, parcial=True)
+
+    def actualizar(self, request, id_categoria, parcial):
         categoria = self.coleccion.find_one({"id_categoria": id_categoria})
         if not categoria:
-            return Response(
-                {"error": "La categoría solicitada no existe."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return error("La categoría solicitada no existe.", status.HTTP_404_NOT_FOUND)
 
-        serializer = self.get_serializer(data=request.data, partial=True)
+        serializer = self.get_serializer(data=request.data, partial=parcial)
         serializer.is_valid(raise_exception=True)
-
-        cambios = serializer.validated_data
+        cambios = dict(serializer.validated_data)
         cambios.pop("id_categoria", None)
 
-        archivo = cambios.get('imagen_portada')
-        if archivo:
-            fs = FileSystemStorage()
-            extension = os.path.splitext(archivo.name)[1]
-            nombre_seguro = f"{uuid.uuid4().hex}{extension}"
-            filename = fs.save(nombre_seguro, archivo)
-            url_relativa = fs.url(filename)
-            cambios['imagen_portada'] = request.build_absolute_uri(url_relativa)
-    
-        if cambios:
-            self.coleccion.update_one(
-                {"id_categoria": id_categoria},
-                {"$set": cambios}
-            )
+        if not parcial:
+            cambios.setdefault("descripcion", "")
 
-        categoria_actualizada = self.coleccion.find_one({"id_categoria": id_categoria})
-        categoria_actualizada["_id"] = str(categoria_actualizada["_id"])
-        return Response(categoria_actualizada, status=status.HTTP_200_OK)
-    
-    # Eliminación (DELETE /api/categorias/{id_categoria}/)
+        ficha_nueva = cambios.get("ficha", categoria["ficha"])
+        if "ficha" in cambios and self.ficha_ocupada(ficha_nueva, excluir_id=id_categoria):
+            return error(f"Ya existe una categoría registrada con la ficha '{ficha_nueva}'.")
+
+        if "padres" in cambios:
+            mensaje = self.validar_padres(
+                cambios["padres"], ficha_propia=ficha_nueva, ficha_anterior=categoria["ficha"]
+            )
+            if mensaje:
+                return error(mensaje)
+
+        archivo = cambios.pop("imagen_portada", None)
+        imagen_anterior = categoria.get("imagen_portada")
+        if archivo:
+            cambios["imagen_portada"] = guardar_imagen(archivo)
+
+        try:
+            if cambios:
+                self.coleccion.update_one({"id_categoria": id_categoria}, {"$set": cambios})
+        except DuplicateKeyError:
+            if archivo:
+                borrar_imagen(cambios["imagen_portada"])
+            return error(f"Ya existe una categoría registrada con la ficha '{ficha_nueva}'.")
+
+        # La imagen anterior solo se borra una vez que la nueva quedó registrada
+        if archivo:
+            borrar_imagen(imagen_anterior)
+        self.propagar_cambio_de_ficha(categoria["ficha"], ficha_nueva)
+
+        actualizada = self.coleccion.find_one({"id_categoria": id_categoria}, {"_id": 0})
+        return self.responder(actualizada)
+
+    # DELETE /api/categorias/{id_categoria}/
     def destroy(self, request, id_categoria=None):
         categoria = self.coleccion.find_one({"id_categoria": id_categoria})
         if not categoria:
-            return Response(
-                {"error": "La categoría solicitada no existe."},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return error("La categoría solicitada no existe.", status.HTTP_404_NOT_FOUND)
 
         if db["Nota"].find_one({"id_categoria": id_categoria}):
-            return Response(
-                {"error": "Integridad referencial: No se puede eliminar una categoría con notas asociadas."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return error("No se puede eliminar una categoría con notas asociadas.")
 
-        imagen_url = categoria.get("imagen_portada")
-        if imagen_url:
-            ruta_path = urlparse(imagen_url).path
-            nombre_archivo = os.path.basename(ruta_path)
-            
-            fs = FileSystemStorage()
-            if fs.exists(nombre_archivo):
-                fs.delete(nombre_archivo)
+        if self.coleccion.find_one({"padres": categoria["ficha"]}):
+            return error("No se puede eliminar una categoría padre. Elimina o reasigna primero sus subcategorías.")
 
         self.coleccion.delete_one({"id_categoria": id_categoria})
-        
+        borrar_imagen(categoria.get("imagen_portada"))
+
         return Response(status=status.HTTP_204_NO_CONTENT)

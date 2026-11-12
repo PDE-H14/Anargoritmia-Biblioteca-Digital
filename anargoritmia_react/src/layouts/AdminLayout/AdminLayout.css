@@ -1,0 +1,18 @@
+/* Armazón de la aplicación (diseño F) */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.app-layout__contenido {
+  flex: 1;
+  min-width: 0; /* permite que tablas y código se desplacen dentro de su caja */
+}
+
+@media (max-width: 760px) {
+  .app-layout {
+    flex-direction: column;
+  }
+}

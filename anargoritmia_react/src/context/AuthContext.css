@@ -1,0 +1,29 @@
+.sin-servidor {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  max-width: 560px;
+  min-height: 100vh;
+  align-content: center;
+  margin: 0 auto;
+  padding: 32px 20px;
+  color: var(--fg);
+}
+.sin-servidor h1 {
+  margin: 12px 0 0 !important;
+  font: 900 clamp(1.7rem, 4vw, 2.3rem) / 1.15 var(--f-ui);
+}
+.sin-servidor p {
+  margin: 0 !important;
+  font-size: 1.1rem;
+  color: var(--soft);
+}
+.sin-servidor__nota {
+  color: var(--mut) !important;
+}
+.sin-servidor__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}

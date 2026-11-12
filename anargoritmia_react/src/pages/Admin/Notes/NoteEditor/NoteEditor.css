@@ -1,0 +1,463 @@
+/* Taller (diseño F). Solo variables de styles/tema.css. */
+
+.taller {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---- Barra superior ---- */
+.taller__barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding: 10px 40px;
+  background: var(--band);
+  color: var(--band-fg);
+  border-bottom: 6px solid var(--band-rule);
+}
+.taller__migas {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  font: 700 1.1rem/1.3 var(--f-ui);
+}
+.taller__volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--toque);
+  color: inherit;
+  font-weight: 400;
+}
+.taller__volver:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.taller__titulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.taller__acciones {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.taller__lector {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+/* El botón secundario sobre la banda toma su color (blanco sobre degradado en oscuro) */
+.taller__barra .boton--secundario {
+  color: var(--band-fg);
+  border-color: var(--band-fg);
+}
+
+.taller__error {
+  padding: 16px 40px 0;
+}
+.taller__mensaje {
+  padding: 40px;
+}
+
+/* ---- Cuerpo: celdas + datos de la nota ---- */
+.taller__cuerpo {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 40px;
+  padding: 32px 40px 48px;
+}
+.taller__celdas {
+  min-width: 0;
+  container-type: inline-size; /* las celdas se adaptan al ancho de su columna */
+}
+.taller__ayuda {
+  margin-top: 20px !important;
+  font-size: 0.9rem;
+  color: var(--mut);
+}
+.taller__ayuda kbd {
+  font: 400 0.85rem var(--f-mono);
+  padding: 0 5px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+}
+
+/* ---- Celda ---- */
+.celda {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.celda--privada {
+  border: 1.5px dashed var(--line-strong);
+}
+.celda__cabecera {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 12px 8px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.celda--privada .celda__cabecera {
+  border-bottom-style: dashed;
+}
+.celda__titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 auto 0 0 !important;
+  min-width: 0;
+}
+.celda__titulo strong {
+  font-size: 1.05rem;
+}
+.celda__archivo {
+  font: 400 0.88rem var(--f-mono);
+  color: var(--mut);
+}
+
+.segmentado {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+.segmentado button {
+  min-height: var(--toque);
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--soft);
+  font: 400 1rem var(--f-ui);
+  cursor: pointer;
+}
+.segmentado button[aria-pressed="true"] {
+  background: var(--pri-bg);
+  color: var(--pri-fg);
+  font-weight: 700;
+}
+.segmentado button:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--acc);
+}
+
+.celda__orden {
+  display: flex;
+}
+.celda__icono-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--toque);
+  height: var(--toque);
+  border: none;
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+.celda__icono-boton:hover:not(:disabled) {
+  background: var(--sur);
+}
+.celda__icono-boton:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.celda__eliminar {
+  color: var(--acc);
+}
+
+.celda__dividido {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.celda__vivo {
+  padding: 16px 24px 20px;
+  min-width: 0;
+}
+.celda__vivo-etiqueta {
+  margin: 0 0 6px !important;
+  font-size: 0.9rem;
+  color: var(--mut);
+}
+.celda__lectura {
+  font-family: var(--f-lectura);
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--fg);
+}
+.celda__vivo-vacia {
+  color: var(--mut);
+  font-style: italic;
+}
+
+.celda__campos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px 20px 18px;
+}
+.celda__pie {
+  padding: 16px 20px 18px;
+}
+.celda__aviso {
+  margin: 0 !important;
+  padding: 14px 20px;
+  color: var(--soft);
+}
+
+/* ---- Pozo de código con números de línea ---- */
+.pozo {
+  position: relative;
+  min-width: 0;
+  padding: 16px 18px 16px 0;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  font: 400 0.95rem/1.6 var(--f-mono);
+  tab-size: 4;
+}
+.pozo:focus-within {
+  box-shadow: inset 0 0 0 2px var(--fg);
+}
+.pozo__linea {
+  position: relative;
+  min-height: 1.6em;
+  padding-left: 56px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pozo__linea::before {
+  content: attr(data-n);
+  position: absolute;
+  left: 0;
+  width: 40px;
+  text-align: right;
+  color: var(--code-num);
+}
+.pozo__clave {
+  color: var(--code-kw);
+}
+.pozo__editor {
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 56px;
+  right: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--code-fg);
+  font: inherit;
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  resize: none;
+  outline: none;
+}
+.pozo__editor:focus-visible {
+  box-shadow: none; /* el anillo lo dibuja .pozo:focus-within */
+}
+.pozo__editor::placeholder {
+  color: var(--code-num);
+}
+.pozo__editor::selection {
+  background: color-mix(in srgb, var(--code-fg) 28%, transparent);
+  color: transparent;
+}
+
+/* ---- Fila «:nueva» ---- */
+.fila-nueva {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.fila-nueva__etiqueta {
+  font: 400 0.95rem var(--f-mono);
+  color: var(--mut);
+  margin-right: 4px;
+}
+.fila-nueva__boton {
+  min-height: var(--toque);
+  padding: 0 16px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--fg);
+  font: 400 1rem var(--f-ui);
+  cursor: pointer;
+}
+.fila-nueva__boton:hover {
+  border-style: solid;
+  border-color: var(--fg);
+}
+
+/* ---- Datos de la nota ---- */
+.datos-nota {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 18px;
+}
+.datos-nota__titulo {
+  margin: 0 !important;
+  font: 700 1rem/1.3 var(--f-ui);
+  color: var(--soft);
+}
+.datos-nota__licencia {
+  display: grid;
+  gap: 8px;
+}
+.datos-nota__licencia .campo__etiqueta {
+  margin: 0 !important;
+}
+.sello-licencia {
+  justify-self: start;
+  margin: 0 !important;
+  padding: 6px 14px;
+  border: 2px solid var(--acc);
+  color: var(--acc);
+  font: 700 1rem var(--f-mono);
+  letter-spacing: 0.08em;
+}
+.datos-nota__nota {
+  margin: 0 !important;
+  color: var(--soft);
+  line-height: 1.5;
+}
+
+/* ---- Barra de estado ---- */
+.barra-estado {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  min-height: 40px;
+  padding-right: 40px;
+  background: var(--sur);
+  border-top: 1px solid var(--line);
+  color: var(--fg);
+  font: 400 0.95rem/1.4 var(--f-mono);
+}
+.barra-estado__modo {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: var(--brand);
+  color: var(--on-brand);
+  font-weight: 700;
+}
+.barra-estado__ficha {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 32ch;
+}
+.barra-estado__guardado {
+  margin-left: auto;
+  color: var(--mut);
+}
+.barra-estado__guardado.es-error {
+  color: var(--acc);
+  font-weight: 700;
+}
+.barra-estado__reintentar {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---- Pantallas medianas y móvil ---- */
+@media (max-width: 1100px) {
+  .taller__cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .datos-nota {
+    position: static;
+    order: -1;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    align-items: start;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .datos-nota__titulo {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  /* la ficha ya aparece en «Datos de la nota» */
+  .barra-estado__ficha {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .taller__barra,
+  .taller__cuerpo {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .taller__error {
+    padding: 12px 16px 0;
+  }
+  .celda__dividido,
+  .celda__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .celda__cabecera {
+    padding-left: 14px;
+  }
+  .barra-estado {
+    padding-right: 16px;
+    font-size: 0.82rem;
+  }
+  .barra-estado {
+    column-gap: 12px;
+  }
+  .barra-estado__guardado {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding: 0 0 4px 12px;
+  }
+}
+
+/* Al final: debe prevalecer sobre las reglas base de la celda */
+@container (max-width: 720px) {
+  .celda__dividido,
+  .celda__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .celda__vivo {
+    border-top: 1px solid var(--line);
+  }
+}

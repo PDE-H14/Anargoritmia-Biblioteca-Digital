@@ -1,0 +1,121 @@
+.publico {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.publico__saltar {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  z-index: 20;
+  padding: 10px 16px;
+  background: var(--pri-bg);
+  color: var(--pri-fg);
+  font-weight: 700;
+}
+.publico__saltar:focus {
+  top: 12px;
+}
+
+/* ---- Cabecera ---- */
+.publico__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 64px;
+  padding: 0 64px;
+  background: var(--hdr);
+  color: var(--hdr-fg);
+}
+.publico__marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+}
+.publico__nombre {
+  font: 400 1.75rem/1 var(--f-cartel);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+.publico__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px 32px;
+}
+.publico__enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  border-bottom: 3px solid transparent;
+  color: inherit;
+  font: 700 0.95rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.publico__enlace:hover {
+  border-bottom-color: currentColor;
+}
+.publico__enlace.es-activo {
+  border-bottom-color: var(--logo-dot);
+}
+.publico__tema {
+  color: inherit;
+}
+
+.publico__contenido {
+  flex: 1;
+}
+
+/* ---- Pie ---- */
+.publico__pie {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  padding: 48px 64px 40px;
+  font: 400 0.85rem/1.6 var(--f-mono);
+  color: var(--fg);
+}
+.publico__pie p {
+  max-width: 62ch;
+  margin: 0 !important;
+}
+.publico__pie a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .publico__cabecera,
+  .publico__pie {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .publico__nav {
+    gap: 4px 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .publico__cabecera,
+  .publico__pie {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  /* El nombre ya está en el logo (aria-label); se oculta para dar sitio al menú */
+  .publico__nombre {
+    display: none;
+  }
+  .publico__enlace {
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+  }
+}

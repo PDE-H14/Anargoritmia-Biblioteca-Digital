@@ -1,32 +1,54 @@
+import React from "react";
+import { Navigate } from "react-router-dom";
 import { AdminLayout } from "../layouts";
-import { HomeAdmin, UsersAdmin, Categories, Me, Notes } from "../pages/Admin";
-import { CreateNote } from "../pages/Admin/Notes/CreateNote";
+import { HomeAdmin, UsersAdmin, Categories, Me } from "../pages/Admin";
+import { NoteEditor, MyNotes } from "../pages/Admin/Notes";
+import { RUTAS, RUTA_EDITAR_NOTA } from "../utils/constants";
 
+const SinLayout = ({ children }) => children;
+const IrAlLab = () => <Navigate to={RUTAS.LAB} replace />;
+
+// /lab/*: cualquier usuario con sesión.
+// /admin/*: solo administradores (staffOnly); el resto vuelve a /lab.
 const routesAdmin = [
   {
-    path: "/admin",
+    path: RUTAS.LAB,
     layout: AdminLayout,
     component: HomeAdmin,
   },
   {
-    path: "/admin/users",
+    path: RUTAS.MIS_NOTAS,
     layout: AdminLayout,
-    component: UsersAdmin,
+    component: MyNotes,
   },
   {
-    path: "/admin/categories",
+    // Incluye /lab/notas/nueva (RUTAS.CREAR): el editor crea el borrador al primer guardado
+    path: RUTA_EDITAR_NOTA,
     layout: AdminLayout,
-    component: Categories,
+    component: NoteEditor,
   },
   {
-    path: "admin/me",
+    path: RUTAS.MIS_DATOS,
     layout: AdminLayout,
     component: Me,
   },
   {
-    path: "admin/create",
+    path: RUTAS.USUARIOS,
     layout: AdminLayout,
-    component: CreateNote,
+    component: UsersAdmin,
+    staffOnly: true,
+  },
+  {
+    path: RUTAS.CATEGORIAS,
+    layout: AdminLayout,
+    component: Categories,
+    staffOnly: true,
+  },
+  {
+    // /admin a secas no tiene página propia
+    path: "/admin",
+    layout: SinLayout,
+    component: IrAlLab,
   },
 ];
 

@@ -1,11 +1,19 @@
-import { ClientLayout } from "../layouts";
-import { Home } from "../pages/Client";
+import { PublicoLayout } from "../layouts/PublicoLayout";
+import { Portada } from "../pages/Client/Portada/Portada";
+import { NoteView } from "../pages/Client";
+import { RUTA_LEER_NOTA } from "../utils/constants";
 
+// Rutas públicas (diseño F): accesibles con o sin sesión
 const routesClient = [
   {
     path: "/",
-    layout: ClientLayout,
-    component: Home,
+    layout: PublicoLayout,
+    component: Portada,
+  },
+  {
+    path: RUTA_LEER_NOTA,
+    layout: PublicoLayout,
+    component: NoteView,
   },
 ];
 

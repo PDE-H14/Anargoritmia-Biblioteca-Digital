@@ -1,3 +1,3 @@
-export * from "./ClientLayout";
 export * from "./AdminLayout";
-export * from "./SimpleLayout";
+export * from "./GuestLayout";
+export * from "./PublicoLayout";

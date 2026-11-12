@@ -15,10 +15,12 @@ db.sqlite3
 db.sqlite3-journal
 
 # Archivos de volcado o copias de seguridad de MongoDB
-*.json
+# (no se ignora *.json: package.json y manifest.json deben versionarse)
+dump/
 *.bson
 *.json.gz
 *.bson.gz
+payload.json
 
 # --- Artefactos de Ejecución de Python (Evita conflictos de caché) ---
 __pycache__/
@@ -85,4 +87,5 @@ yarn-error.log*
 Thumbs.db
 Desktop.ini
 
-*.txt
+# Registros locales de pruebas manuales (no *.txt: requirements.txt debe versionarse)
+pruebas_*.txt

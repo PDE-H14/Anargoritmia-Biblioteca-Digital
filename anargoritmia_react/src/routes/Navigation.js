@@ -1,13 +1,12 @@
 import React from "react";
 import { Routes, BrowserRouter, Route } from "react-router-dom";
-import { map } from "lodash";
 import routes from "./routes";
 
 export function Navigation() {
   return (
     <BrowserRouter>
       <Routes>
-        {map(routes, (route, index) => {
+        {routes.map((route, index) => {
           const Layout = route.layout;
           const Component = route.component;
           return (
@@ -15,7 +14,7 @@ export function Navigation() {
               key={index}
               path={route.path}
               element={
-                <Layout>
+                <Layout staffOnly={route.staffOnly}>
                   <Component />
                 </Layout>
               }

@@ -1,13 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import "./App.scss";
 import reportWebVitals from "./reportWebVitals";
 
-import "semantic-ui-css/semantic.min.css";
+// Orden: fuentes locales → notificaciones → tema (variables y base) → componentes base
+import "./styles/fuentes.css";
 import "react-toastify/dist/ReactToastify.css";
-
-import "./scss/global.scss";
+import "./styles/tema.css";
+import "./components/UI/ui.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(

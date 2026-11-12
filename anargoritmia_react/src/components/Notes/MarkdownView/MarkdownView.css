@@ -1,0 +1,82 @@
+/*
+ * Vista Markdown + KaTeX. Sin colores propios: hereda el del contenedor
+ * (currentColor), así sirve en el taller y en la lectura.
+ */
+.markdown-view {
+  color: inherit;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.markdown-view > :first-child {
+  margin-top: 0;
+}
+.markdown-view > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-view h1,
+.markdown-view h2,
+.markdown-view h3,
+.markdown-view h4 {
+  color: inherit;
+  font-family: inherit;
+  margin: 1.2em 0 0.5em;
+  line-height: 1.25;
+}
+
+.markdown-view a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown-view code {
+  font-family: var(--f-mono);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+.markdown-view pre {
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px 16px;
+  border-radius: var(--radio);
+  overflow-x: auto;
+}
+.markdown-view pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-view blockquote {
+  margin: 1em 0;
+  padding: 2px 16px;
+  border-left: 3px solid var(--margin);
+  color: inherit;
+  opacity: 0.85;
+}
+
+.markdown-view table {
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+.markdown-view th,
+.markdown-view td {
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  padding: 6px 10px;
+}
+
+.markdown-view ul,
+.markdown-view ol {
+  padding-left: 1.5em;
+}
+
+/* Las ecuaciones largas se desplazan en horizontal sin romper el diseño */
+.markdown-view .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}

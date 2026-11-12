@@ -1,0 +1,39 @@
+.usuarios {
+  padding: 32px 40px 60px;
+}
+.usuarios .tabla__t {
+  min-width: 860px;
+}
+.usuarios__alias {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.usuarios__tu {
+  font-weight: 400;
+  color: var(--mut);
+}
+.usuarios__correo {
+  overflow-wrap: anywhere;
+}
+.usuarios__nota {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  padding: 0 4px;
+  font-size: 0.9rem;
+  color: var(--mut);
+}
+
+.si-no {
+  font-weight: 700;
+}
+.si-no--no {
+  font-weight: 400;
+  color: var(--mut);
+}
+
+@media (max-width: 760px) {
+  .usuarios {
+    padding: 20px 16px 40px;
+  }
+}

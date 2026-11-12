@@ -1,0 +1,245 @@
+/* Lectura (diseño F). Solo variables de styles/tema.css. */
+
+.lectura {
+  --margen: 180px;
+  --hueco: 48px;
+  /* columna de texto de ~38em de la letra de lectura (52rem) */
+  max-width: calc(var(--margen) + var(--hueco) * 2 + 52rem);
+  margin: 0 auto;
+  padding: 72px 24px 24px;
+  counter-reset: ecuacion; /* numeración continua en toda la nota */
+  font-family: var(--f-lectura);
+  color: var(--fg);
+}
+
+/* Cada fila: margen de metadatos | línea vertical | texto */
+.lectura__fila {
+  display: grid;
+  grid-template-columns: var(--margen) minmax(0, 1fr);
+  column-gap: var(--hueco);
+}
+.lectura__margen {
+  padding-bottom: 40px;
+  font-size: 1.05rem;
+  color: var(--soft);
+}
+.lectura__cuerpo {
+  min-width: 0;
+  padding: 0 0 56px var(--hueco);
+  border-left: 2px solid var(--margin);
+}
+.lectura__cuerpo--aviso {
+  padding-bottom: 32px;
+  font-family: var(--f-ui);
+}
+
+.lectura__margen p {
+  margin: 0 0 10px !important;
+}
+.lectura__categoria {
+  color: var(--fg);
+  font-size: 1.15rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lectura__ficha {
+  margin-top: 22px !important;
+  font: 400 0.9rem var(--f-mono);
+  color: var(--mut);
+  overflow-wrap: anywhere;
+}
+.lectura__editar {
+  font-family: var(--f-ui);
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lectura__versalitas {
+  font-variant: small-caps;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: var(--fg);
+}
+.lectura__dato {
+  color: var(--mut);
+}
+.lectura__copiar {
+  min-height: var(--toque);
+  margin-top: 6px;
+  padding: 0 18px;
+  border: 1.5px solid var(--fg);
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+  font: 400 1.1rem var(--f-lectura);
+  cursor: pointer;
+}
+.lectura__copiar:hover {
+  background: var(--sur);
+}
+
+/* ---- Cabecera ---- */
+.lectura__titulo {
+  margin: 0 0 18px !important;
+  font: 400 clamp(2.3rem, 4.5vw, 3.6rem) / 1.12 var(--f-lectura);
+}
+.lectura__firma {
+  font-size: 1.35rem;
+}
+.lectura__tenue {
+  color: var(--mut);
+}
+.lectura__tenue a {
+  color: inherit;
+}
+.lectura__tenue a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Texto ---- */
+.lectura__texto {
+  font-family: var(--f-lectura);
+  font-size: 1.32rem;
+  line-height: 1.65;
+  text-align: justify;
+  hyphens: auto;
+}
+.lectura__texto h1,
+.lectura__texto h2,
+.lectura__texto h3 {
+  text-align: left;
+  font-weight: 700;
+}
+/* Ecuaciones en bloque numeradas a la derecha: (1), (2)… */
+.lectura .katex-display {
+  position: relative;
+  padding-right: 3.5em;
+  counter-increment: ecuacion;
+}
+.lectura .katex-display::after {
+  content: "(" counter(ecuacion) ")";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--f-lectura);
+  font-size: 1.1rem;
+}
+.lectura__vacia {
+  color: var(--mut);
+  font-style: italic;
+}
+
+/* ---- Código: «Algoritmo N» ---- */
+.lectura__algoritmo {
+  margin: 0;
+  border-top: 2px solid var(--fg);
+  border-bottom: 2px solid var(--fg);
+  background: var(--lectura-codigo);
+}
+.lectura__algoritmo figcaption {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--fg);
+  font-size: 1.3rem;
+}
+.lectura__codigo {
+  margin: 0;
+  padding: 16px 18px 18px 0;
+  overflow-x: auto;
+  font: 400 1rem/1.75 var(--f-mono);
+  color: var(--fg);
+  background: transparent;
+  tab-size: 4;
+}
+.lectura__linea {
+  display: block;
+  position: relative;
+  padding-left: 3.6em;
+  white-space: pre;
+}
+.lectura__linea::before {
+  content: attr(data-n);
+  position: absolute;
+  left: 0;
+  width: 2.6em;
+  text-align: right;
+  color: var(--mut);
+  user-select: none;
+}
+.lectura__replicacion {
+  margin-top: 18px !important;
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+.lectura__replicacion .markdown-view {
+  display: inline;
+}
+.lectura__replicacion .markdown-view > p {
+  display: inline;
+}
+
+/* ---- Notas al pie ---- */
+.lectura__notas .lectura__cuerpo {
+  padding-bottom: 72px;
+}
+.lectura__pie {
+  max-width: 34em;
+  margin: 0;
+  padding: 18px 0 0 1.2em;
+  border-top: 1px solid var(--fg);
+  font-size: 1.15rem;
+  line-height: 1.6;
+}
+.lectura__pie li {
+  margin-bottom: 12px;
+}
+.lectura__pie li::marker {
+  font-size: 0.8em;
+}
+.lectura__pie a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lectura-mensaje {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
+
+/* ---- Móvil: el margen se apila sobre cada celda ---- */
+@media (max-width: 760px) {
+  .lectura {
+    --hueco: 16px;
+    padding: 32px 16px 16px;
+  }
+  .lectura__fila {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lectura__margen {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    padding: 0 0 10px var(--hueco);
+    border-left: 2px solid var(--margin);
+  }
+  .lectura__margen:empty {
+    display: none;
+  }
+  .lectura__margen p {
+    margin: 0 !important;
+  }
+  .lectura__ficha {
+    margin-top: 0 !important;
+  }
+  .lectura__cuerpo {
+    padding-bottom: 36px;
+  }
+  .lectura__texto {
+    font-size: 1.2rem;
+    text-align: left;
+  }
+}

@@ -1,0 +1,33 @@
+.error404 {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+}
+.error404__codigo {
+  margin: 0 !important;
+  padding-bottom: 12px;
+  border-bottom: 6px solid var(--fg);
+  font: 400 clamp(6rem, 24vw, 16rem) / 0.9 var(--f-cartel);
+  color: var(--acc);
+}
+.error404__titulo {
+  margin: 28px 0 8px !important;
+  font: 900 clamp(1.8rem, 4vw, 2.6rem) / 1.15 var(--f-ui);
+}
+.error404__texto {
+  font-size: 1.3rem;
+  color: var(--soft);
+}
+.error404__acciones {
+  margin-top: 28px;
+}
+.error404__principal {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--toque);
+  padding: 0 22px;
+  border-radius: var(--radio);
+  background: var(--pri-bg);
+  color: var(--pri-fg);
+  font: 700 1.05rem var(--f-ui);
+}

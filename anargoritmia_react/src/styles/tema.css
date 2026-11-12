@@ -1,0 +1,209 @@
+/*
+ * Tema de Anargoritmia (diseño F).
+ * Único lugar del proyecto con colores literales: los componentes solo usan
+ * estas variables. :root es el modo claro; [data-theme="oscuro"] lo redefine.
+ * El atributo lo fija public/index.html antes del primer pintado.
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --fg: #141210;
+  --soft: #3a3d45;
+  --mut: #5b616e;
+  --sur: #f5f6f7;
+  --line: #e3e5e8;
+  --line-strong: #8b919c;
+  --acc: #c8102e; /* rojo como texto: eliminar, sello */
+  --brand: #c8102e; /* rojo como relleno: menú activo, CTA de portada */
+  --on-brand: #ffffff; /* texto sobre --brand */
+  --pri-bg: #141210; /* botón principal, etiqueta «Publicada» */
+  --pri-fg: #ffffff;
+  --hdr: #141210; /* cabecera pública */
+  --hdr-fg: #ffffff;
+  --inv: #141210; /* franja de principios, panel de acceso */
+  --inv-fg: #ffffff;
+  --band: #ffffff; /* encabezado de página en la app */
+  --band-fg: #141210;
+  --band-soft: #3a3d45; /* subtítulo del encabezado */
+  --band-rule: #141210; /* filete de 6px bajo el encabezado */
+  --margin: #b4322b; /* línea de margen en lectura */
+  --danger-bg: #fff5f5;
+  --danger-line: #c8102e;
+  --logo-dot: #c8102e;
+  --lectura-codigo: #ffffff; /* fondo del código en la página de lectura */
+
+  --degradado: linear-gradient(120deg, #a0282c 0%, #5e171a 50%, #1a1213 100%);
+
+  /* Pozos de código: siguen el modo (claros aquí, oscuros en [data-theme="oscuro"]) */
+  --code-bg: #f5f6f7;
+  --code-fg: #141210;
+  --code-num: #5b616e;
+  --code-kw: #9a3412;
+
+  /* Avisos (diseño propio, coherente con el tema) */
+  --ok: #1f6b3a;
+  --ok-bg: #f0f7f2;
+  --warn: #8a5a00;
+  --warn-bg: #fff8e6;
+  --sombra: 0 8px 24px rgba(20, 18, 16, 0.12);
+  --velo: rgba(20, 18, 16, 0.55); /* fondo de diálogos */
+
+  /* Tipografía */
+  --f-ui: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-cartel: "Anton", "Lato", sans-serif;
+  --f-lectura: "STIX Two Text", "Times New Roman", serif;
+  --f-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+
+  /* Medidas */
+  --radio: 8px;
+  --toque: 44px; /* área táctil mínima */
+  --foco: 0 0 0 3px var(--bg), 0 0 0 5px var(--fg);
+}
+
+[data-theme="oscuro"] {
+  color-scheme: dark;
+
+  --bg: #141414;
+  --fg: #f2f0ee;
+  --soft: #d6d3d1;
+  --mut: #a8a29e;
+  --sur: #1e1e1e;
+  --line: #2e2e2e;
+  --line-strong: #78716c;
+  --acc: #f26d72;
+  --brand: #a0282c;
+  --on-brand: #ffffff;
+  --pri-bg: #f2f0ee;
+  --pri-fg: #141414;
+  --hdr: #1e1e1e;
+  --hdr-fg: #f2f0ee;
+  --inv: var(--degradado);
+  --inv-fg: #ffffff;
+  --band: var(--degradado);
+  --band-fg: #ffffff;
+  --band-soft: rgba(255, 255, 255, 0.88);
+  --band-rule: transparent;
+  --margin: #a0282c;
+  --danger-bg: #1b1414;
+  --danger-line: #a34a4e;
+  --logo-dot: #c8323a;
+  --lectura-codigo: #1e1e1e;
+
+  --code-bg: #101010;
+  --code-fg: #f2f0ee;
+  --code-num: #8a8580;
+  --code-kw: #f2c14e;
+
+  --ok: #7cc49a;
+  --ok-bg: #142019;
+  --warn: #f2c14e;
+  --warn-bg: #211b0e;
+  --sombra: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --velo: rgba(0, 0, 0, 0.65);
+}
+
+/* Fondo de los diálogos: ::backdrop no siempre hereda variables, va con literales */
+.dialogo::backdrop {
+  background: rgba(20, 18, 16, 0.55);
+}
+[data-theme="oscuro"] .dialogo::backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Reinicio mínimo (antes lo aportaba reset.min.css de Semantic UI) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+img,
+svg {
+  max-width: 100%;
+}
+
+/* Base global */
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--f-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4285em;
+}
+
+/* Base tipográfica */
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--f-ui);
+  line-height: 1.2857em;
+  margin: calc(2rem - 0.1428em) 0 1rem;
+  font-weight: 700;
+  padding: 0;
+}
+h1 {
+  min-height: 1rem;
+  font-size: 2rem;
+}
+h2 {
+  font-size: 1.714rem;
+}
+h3 {
+  font-size: 1.28rem;
+}
+h4 {
+  font-size: 1.071rem;
+}
+h5 {
+  font-size: 1rem;
+}
+h1:first-child,
+h2:first-child,
+h3:first-child,
+h4:first-child,
+h5:first-child {
+  margin-top: 0;
+}
+p {
+  margin: 0 0 1em;
+  line-height: 1.4285em;
+}
+p:first-child {
+  margin-top: 0;
+}
+p:last-child {
+  margin-bottom: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+::selection {
+  background-color: var(--line-strong);
+  color: var(--bg);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}

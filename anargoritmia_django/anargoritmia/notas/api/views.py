@@ -5,170 +5,212 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from pymongo.errors import DuplicateKeyError
 from db import db
-from .serializers import NotaSerializer
+from .serializers import NotaSerializer, generar_ficha
+
+LICENCIA = "CC BY-SA 4.0"
+MENSAJE_DUPLICADO = "Ya existe un documento de este autor con este título."
+
+
+def ahora():
+    """Fecha actual en UTC truncada a milisegundos, la precisión que guarda MongoDB."""
+    fecha = datetime.now(timezone.utc)
+    return fecha.replace(microsecond=fecha.microsecond // 1000 * 1000)
+
+
+def error(mensaje, codigo=status.HTTP_400_BAD_REQUEST):
+    return Response({"error": mensaje}, status=codigo)
+
+
+def puede_editar(nota, usuario):
+    """Solo el autor original o un administrador modifican una nota."""
+    return usuario.is_authenticated and (
+        nota['autor']['id_usuario'] == str(usuario.id) or usuario.is_staff
+    )
+
+
+def calcular_ficha(titulo, id_documento):
+    """Ficha para URLs; los borradores sin título reciben una provisional única."""
+    return generar_ficha(titulo or "") or f"sin-titulo-{id_documento[:8]}"
+
+
+def texto_publico(bloques):
+    """
+    Texto plano de los bloques de texto públicos. Se guarda en `contenido`
+    para búsquedas y vistas previas (y para cumplir el validador de Atlas).
+    """
+    return "\n\n".join(
+        b.get("contenido", "") for b in bloques
+        if b.get("tipo") == "texto" and b.get("publico")
+    )
+
+
+def version_publica(nota):
+    """Copia de la nota con solo sus bloques públicos: lo que ve un lector."""
+    return {**nota, "bloques": [b for b in nota.get("bloques", []) if b.get("publico")]}
+
 
 class NotaViewSet(viewsets.GenericViewSet):
-    coleccion = db['Nota']
     lookup_field = 'id_documento'
     serializer_class = NotaSerializer
 
+    @property
+    def coleccion(self):
+        return db['Nota']
+
     def get_permissions(self):
         """
-        Lectura pública para notas validadas; 
+        Lectura pública para notas publicadas;
         escritura restringida a usuarios autenticados vía JWT.
         """
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
+    def serializar(self, documento, codigo=status.HTTP_200_OK):
+        return Response(NotaSerializer(documento).data, status=codigo)
+
+    def serializer_de_edicion(self, nota, data, parcial):
+        contexto = self.get_serializer_context()
+        contexto['nota'] = nota
+        contexto['id_autor'] = nota['autor']['id_usuario']
+        contexto['id_documento'] = nota['id_documento']
+        return NotaSerializer(data=data, partial=parcial, context=contexto)
+
+    @staticmethod
+    def completar_derivados(datos, id_documento):
+        """Campos que el servidor calcula a partir de lo editable."""
+        if 'titulo' in datos:
+            datos['ficha'] = calcular_ficha(datos['titulo'], id_documento)
+        if 'bloques' in datos:
+            datos['bloques'] = [dict(b) for b in datos['bloques']]
+            datos['contenido'] = texto_publico(datos['bloques'])
+        datos['fecha_modificacion'] = ahora()
+        return datos
+
+    # ------------------------------------------------------------------ #
+    # Lectura
+    # ------------------------------------------------------------------ #
     def list(self, request):
         """
-        Consulta pública: Filtra exclusivamente notas publicadas (es_borrador = False).
+        Consulta pública: solo notas publicadas y solo sus bloques públicos.
+        Filtro opcional: ?categoria=<id_categoria>
         """
         query = {"es_borrador": False}
-        
-        # Filtro opcional por categoría si React lo envía en la URL (?categoria=ficha)
-        categoria_ficha = request.query_params.get('categoria')
-        if categoria_ficha:
-            query["id_categoria"] = categoria_ficha
+        id_categoria = request.query_params.get('categoria')
+        if id_categoria:
+            query["id_categoria"] = id_categoria
 
-        notas_mongo = list(self.coleccion.find(query))
+        notas = self.coleccion.find(query, {"_id": 0}).sort("fecha_publicacion", -1)
+        return Response(
+            NotaSerializer([version_publica(n) for n in notas], many=True).data,
+            status=status.HTTP_200_OK,
+        )
 
-        for nota in notas_mongo:
-            nota['_id'] = str(nota['_id'])
-
-        serializer = self.get_serializer(notas_mongo, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(detail=False, methods=['get'])
+    def mias(self, request):
+        """
+        GET /api/notas/mias/: todas las notas del usuario autenticado,
+        incluidos borradores y bloques privados, de la más reciente a la más antigua.
+        """
+        notas = self.coleccion.find(
+            {"autor.id_usuario": str(request.user.id)}, {"_id": 0}
+        ).sort("fecha_modificacion", -1)
+        return Response(NotaSerializer(list(notas), many=True).data, status=status.HTTP_200_OK)
 
     def retrieve(self, request, id_documento=None):
         """
-        Recupera una nota específica mediante su id_documento agnóstico (UUID).
+        - Autor o administrador: la nota completa (borradores y bloques privados),
+          salvo que pida ?vista=publica para previsualizar lo que ve un lector.
+        - Cualquier otra persona: solo notas publicadas y solo sus bloques públicos.
         """
-        
-        nota = self.coleccion.find_one({"id_documento": id_documento, "es_borrador": False})
-        
+        nota = self.coleccion.find_one({"id_documento": id_documento}, {"_id": 0})
         if nota:
-            nota['_id'] = str(nota['_id'])
+            if puede_editar(nota, request.user):
+                # El autor puede previsualizar incluso un borrador como lo vería un lector
+                if request.query_params.get('vista') == 'publica':
+                    return self.serializar(version_publica(nota))
+                return self.serializar(nota)
+            if not nota.get('es_borrador'):
+                return self.serializar(version_publica(nota))
 
-            serializer = self.get_serializer(nota)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-            
-        return Response(
-            {"error": "El documento no existe o se encuentra en estado de borrador."}, 
-            status=status.HTTP_404_NOT_FOUND
-        )
+        return error("El documento no existe o se encuentra en estado de borrador.",
+                     status.HTTP_404_NOT_FOUND)
 
+    # ------------------------------------------------------------------ #
+    # Escritura
+    # ------------------------------------------------------------------ #
     def create(self, request):
         """
-        Inyección de conocimiento: Requiere JWT y fuerza los metadatos del servidor.
+        Requiere JWT. El servidor fija identificador, autor, ficha y licencia.
+        Una nota nueva puede crearse vacía (borrador) para el autoguardado.
         """
-        serializer = NotaSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        datos = serializer.validated_data
+        datos = dict(serializer.validated_data)
 
         datos['id_documento'] = str(uuid.uuid4())
-        datos['licencia'] = "CC BY-SA 4.0"
-
+        datos['licencia'] = LICENCIA
         datos['autor'] = {
             "id_usuario": str(request.user.id),
             "alias": request.user.username,
-            "correo": request.user.email
+            "correo": request.user.email,
         }
-
-        if not datos.get('es_borrador') and not datos.get('fecha_publicacion'):
-            datos['fecha_publicacion'] = datetime.now(timezone.utc)
+        self.completar_derivados(datos, datos['id_documento'])
+        datos['fecha_publicacion'] = None if datos['es_borrador'] else datos['fecha_modificacion']
 
         try:
             self.coleccion.insert_one(datos)
         except DuplicateKeyError:
-            return Response(
-                {"error": "Conflicto de entidad: Ya tienes una nota registrada con este título o ficha."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return error(MENSAJE_DUPLICADO)
 
-        datos['_id'] = str(datos['_id'])
-        return Response(datos, status=status.HTTP_201_CREATED)
+        datos.pop('_id', None)
+        return self.serializar(datos, status.HTTP_201_CREATED)
 
     def update(self, request, id_documento=None):
-        """
-        Actualización completa (PUT). Requiere autenticación JWT.
-        """
-        nota = self.coleccion.find_one({"id_documento": id_documento})
+        """Actualización completa (PUT)."""
+        return self.actualizar(request, id_documento, parcial=False)
+
+    def partial_update(self, request, id_documento=None):
+        """Actualización parcial (PATCH): lo que usa el autoguardado."""
+        return self.actualizar(request, id_documento, parcial=True)
+
+    def actualizar(self, request, id_documento, parcial):
+        nota = self.coleccion.find_one({"id_documento": id_documento}, {"_id": 0})
         if not nota:
-            return Response({"error": "El documento no existe."}, status=status.HTTP_404_NOT_FOUND)
+            return error("El documento no existe.", status.HTTP_404_NOT_FOUND)
+        if not puede_editar(nota, request.user):
+            return error("Solo el autor original o un administrador pueden modificar este recurso.",
+                         status.HTTP_403_FORBIDDEN)
 
-        if nota['autor']['id_usuario'] != str(request.user.id):
-            return Response({"error": "No tienes permisos de edición sobre este recurso."}, status=status.HTTP_403_FORBIDDEN)
-
-        serializer = NotaSerializer(data=request.data)
+        serializer = self.serializer_de_edicion(nota, request.data, parcial)
         serializer.is_valid(raise_exception=True)
-        
-        datos = serializer.validated_data
-        
-        datos['id_documento'] = id_documento
-        datos['licencia'] = "CC BY-SA 4.0"
-        datos['autor'] = nota['autor']  
+        cambios = dict(serializer.validated_data)
+        cambios['licencia'] = LICENCIA
+        self.completar_derivados(cambios, id_documento)
 
-        self.coleccion.replace_one({"id_documento": id_documento}, datos)
-        
-        datos['_id'] = str(nota['_id'])
-        
-        return Response(datos, status=status.HTTP_200_OK)
+        # La fecha de publicación se fija la primera vez que se publica y
+        # se borra al regresar a borrador.
+        if 'es_borrador' in cambios:
+            if cambios['es_borrador']:
+                cambios['fecha_publicacion'] = None
+            elif not nota.get('fecha_publicacion'):
+                cambios['fecha_publicacion'] = cambios['fecha_modificacion']
+
+        try:
+            self.coleccion.update_one({"id_documento": id_documento}, {"$set": cambios})
+        except DuplicateKeyError:
+            return error(MENSAJE_DUPLICADO)
+
+        actualizada = self.coleccion.find_one({"id_documento": id_documento}, {"_id": 0})
+        return self.serializar(actualizada)
 
     def destroy(self, request, id_documento=None):
-        """
-        Eliminación física (DELETE).
-        """
+        """Eliminación física (DELETE)."""
         nota = self.coleccion.find_one({"id_documento": id_documento})
         if not nota:
-            return Response({"error": "El documento no existe."}, status=status.HTTP_404_NOT_FOUND)
-
-        if nota['autor']['id_usuario'] != str(request.user.id) and not request.user.is_staff:
-            return Response({"error": "No tienes permisos para eliminar este recurso."}, status=status.HTTP_403_FORBIDDEN)
+            return error("El documento no existe.", status.HTTP_404_NOT_FOUND)
+        if not puede_editar(nota, request.user):
+            return error("No tienes permisos para eliminar este recurso.", status.HTTP_403_FORBIDDEN)
 
         self.coleccion.delete_one({"id_documento": id_documento})
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    def partial_update(self, request, id_documento=None):
-        """
-        Actualización parcial (PATCH). Permite modificar campos individuales.
-        """
-        id_doc = id_documento  
-        nota = self.coleccion.find_one({"id_documento": id_doc})
-            
-        if not nota:
-            return Response(
-                {"error": "El documento no existe en el repositorio."}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if nota['autor']['id_usuario'] != str(request.user.id) and not request.user.is_staff:
-            return Response(
-                {"error": "Acceso denegado: Solo el autor original o un administrador pueden modificar este recurso."}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = NotaSerializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        
-        cambios = serializer.validated_data
-
-        cambios.pop('id_documento', None)  
-        cambios.pop('autor', None)         
-        cambios['licencia'] = "CC BY-SA 4.0" 
-
-        if cambios.get('es_borrador') is False and nota.get('es_borrador') is True:
-            if not nota.get('fecha_publicacion'):
-                cambios['fecha_publicacion'] = datetime.now(timezone.utc)
-
-        if cambios:
-            self.coleccion.update_one(
-                {"id_documento": id_doc},
-                {"$set": cambios}
-            )
-
-        nota_actualizada = self.coleccion.find_one({"id_documento": id_doc})
-        nota_actualizada['_id'] = str(nota_actualizada['_id'])
-
-        return Response(nota_actualizada, status=status.HTTP_200_OK)

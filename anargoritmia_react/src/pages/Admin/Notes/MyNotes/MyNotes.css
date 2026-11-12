@@ -1,0 +1,30 @@
+.mis-notas {
+  padding: 32px 40px 60px;
+}
+
+.mis-notas .tabla__t {
+  min-width: 860px; /* en pantallas angostas la tabla se desplaza dentro de su caja */
+}
+
+.mis-notas__titulo {
+  font-weight: 700;
+  max-width: 28em;
+}
+.mis-notas__titulo a {
+  color: var(--fg);
+}
+.mis-notas__titulo a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mis-notas__fecha {
+  white-space: nowrap;
+  color: var(--soft);
+}
+
+@media (max-width: 760px) {
+  .mis-notas {
+    padding: 20px 16px 40px;
+  }
+}

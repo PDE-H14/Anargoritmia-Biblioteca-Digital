@@ -1,170 +1,41 @@
-import { BASE_API } from "../utils/constants";
+import { apiFetch } from "./http";
 
 export async function loginApi(formValues) {
   try {
-    const url = `${BASE_API}/api/auth/login/`;
-    const params = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formValues),
-    };
-    const response = await fetch(url, params);
-
-    if (response.status !== 200) {
+    return await apiFetch("/api/auth/login/", { method: "POST", json: formValues });
+  } catch (error) {
+    if (error.status === 401) {
       throw new Error("Usuario o contraseña incorrectos");
     }
-    const result = await response.json();
-    return result;
-  } catch (error) {
     throw error;
   }
 }
 
-export async function getMeApi(token) {
-  try {
-    const url = `${BASE_API}/api/auth/me/`;
-    const params = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const response = await fetch(url, params);
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
+export function getMeApi(token) {
+  return apiFetch("/api/auth/me/", { token });
 }
 
-export async function getUsersApi(token) {
-  try {
-    const url = `${BASE_API}/api/usuarios/`;
-    const params = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const response = await fetch(url, params);
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
+export function getUsersApi(token) {
+  return apiFetch("/api/usuarios/", { token });
 }
 
-export async function createUserApi(formValues, token) {
-  try {
-    const url = `${BASE_API}/api/usuarios/`;
-    const params = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formValues),
-    };
-    const response = await fetch(url, params);
-
-    if (response.status !== 200 && response.status !== 201) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (parseError) {
-        errorData = { detail: "Respuesta de error no procesable." };
-      }
-      const apiError = new Error("Error en la petición a la API");
-      apiError.isApiError = true;
-      apiError.data = errorData;
-      throw apiError;
-    }
-
-    return await response.json();
-  } catch (error) {
-    throw error;
-  }
-}
-export async function updateUserApi(id, formValues, token) {
-  try {
-    const url = `${BASE_API}/api/usuarios/${id}/`;
-    const params = {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formValues),
-    };
-    const response = await fetch(url, params);
-    if (response.status !== 200) {
-      throw new Error("Error al actualizar usuario");
-    }
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
-}
-export async function deleteUserApi(id, token) {
-  try {
-    const url = `${BASE_API}/api/usuarios/${id}/`;
-    const params = {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-    const response = await fetch(url, params);
-    if (response.status !== 200) {
-      throw new Error("Error al eliminar usuario");
-    }
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
+export function createUserApi(formValues, token) {
+  return apiFetch("/api/usuarios/", { method: "POST", token, json: formValues });
 }
 
-export async function updateMeApi(id, formValues, token) {
-  try {
-    const url = `${BASE_API}/api/auth/me/`;
-    const params = {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(formValues),
-    };
-    const response = await fetch(url, params);
-    if (response.status !== 200) {
-      throw new Error("Error al actualizar mi información");
-    }
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
+export function updateUserApi(id, formValues, token) {
+  return apiFetch(`/api/usuarios/${id}/`, { method: "PATCH", token, json: formValues });
 }
 
-export async function deleteMeApi(id, token) {
-  try {
-    const url = `${BASE_API}/api/auth/me/`;
-    const params = {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
+export function deleteUserApi(id, token) {
+  return apiFetch(`/api/usuarios/${id}/`, { method: "DELETE", token });
+}
 
-    const response = await fetch(url, params);
-    if (response.status !== 200) {
-      throw new Error("Error al eliminar usuario");
-    }
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    throw error;
-  }
+export function updateMeApi(formValues, token) {
+  return apiFetch("/api/auth/me/", { method: "PATCH", token, json: formValues });
+}
+
+// La contraseña se envía para que el backend confirme la identidad antes de borrar.
+export function deleteMeApi(password, token) {
+  return apiFetch("/api/auth/me/", { method: "DELETE", token, json: { password } });
 }

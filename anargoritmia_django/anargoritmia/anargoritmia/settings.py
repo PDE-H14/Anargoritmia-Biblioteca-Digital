@@ -17,15 +17,20 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Las variables se leen de BASE_DIR/.env antes de evaluar cualquier ajuste.
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-clave-temporal-desarrollo')
+# DEBUG solo se activa de forma explícita (DEBUG=True en .env).
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# Fuera de desarrollo la clave es obligatoria: sin ella el servidor no arranca.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise RuntimeError("SECRET_KEY no está definida en el entorno (.env).")
+    SECRET_KEY = 'django-insecure-clave-temporal-desarrollo'
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -119,6 +124,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 REST_FRAMEWORK = {
+    # Fallos de MongoDB -> 503 con mensaje claro (ver anargoritmia/excepciones.py)
+    'EXCEPTION_HANDLER': 'anargoritmia.excepciones.manejador_excepciones',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         #Pruebas
         'rest_framework.authentication.BasicAuthentication',

@@ -1,1 +1,2 @@
-export * from "./Home";
+export * from "./Portada/Portada";
+export * from "./NoteView";

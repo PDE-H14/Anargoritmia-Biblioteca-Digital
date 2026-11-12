@@ -1,0 +1,146 @@
+/* Acceso (diseño F). Solo variables de styles/tema.css. */
+
+.acceso {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* ---- Marca ---- */
+.acceso__marca {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 72px 64px 56px 64px;
+  background: var(--inv);
+  color: var(--inv-fg);
+}
+.acceso__logo {
+  align-self: flex-start;
+  color: inherit;
+}
+.acceso__nombre {
+  display: grid;
+  margin: 0 0 24px !important;
+  font: 400 clamp(4rem, 9vw, 9rem) / 0.86 var(--f-cartel);
+  text-transform: uppercase;
+}
+.acceso__descripcion {
+  max-width: 30em;
+  font-size: 1.45rem;
+  line-height: 1.45;
+}
+.acceso__lema {
+  margin: 0 !important;
+  font: 700 1rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* ---- Formulario ---- */
+.acceso__panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 32px;
+}
+.acceso__tema {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--fg);
+}
+.acceso__formulario {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 520px);
+}
+.acceso__titulo {
+  margin: 0 0 4px !important;
+  font: 900 clamp(2.2rem, 3.5vw, 3rem) / 1.1 var(--f-ui);
+}
+.acceso__formulario .campo__control {
+  min-height: 56px;
+  background: var(--sur);
+  font-size: 1.1rem;
+}
+.acceso__formulario .campo__etiqueta {
+  font-size: 1.05rem;
+}
+.acceso__formulario .boton {
+  min-height: 56px;
+  font-size: 1.15rem;
+}
+.acceso__error:focus {
+  outline: none;
+}
+
+.acceso__contrasena {
+  position: relative;
+}
+.acceso__mostrar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-height: 28px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--soft);
+  font: 700 0.95rem var(--f-ui);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.acceso__mostrar:hover {
+  color: var(--fg);
+}
+
+.acceso__nota {
+  margin: 4px 0 0 !important;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  color: var(--mut);
+  font-size: 1.05rem;
+}
+.acceso__nota a {
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Móvil: la marca se apila arriba, compacta ---- */
+@media (max-width: 860px) {
+  .acceso {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .acceso__marca {
+    gap: 20px;
+    padding: 28px 16px 24px;
+  }
+  .acceso__logo .logo {
+    width: 56px !important;
+    height: 56px !important;
+  }
+  .acceso__nombre {
+    grid-auto-flow: column;
+    justify-content: start;
+    margin-bottom: 12px !important;
+    font-size: clamp(2.6rem, 13vw, 4.5rem);
+  }
+  .acceso__descripcion {
+    font-size: 1.1rem;
+  }
+  .acceso__lema {
+    font-size: 0.8rem;
+  }
+  .acceso__panel {
+    align-items: flex-start;
+    padding: 40px 16px 48px;
+  }
+}

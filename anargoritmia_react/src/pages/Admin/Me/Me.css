@@ -1,0 +1,116 @@
+.mis-datos {
+  display: grid;
+  gap: 24px;
+  max-width: 1000px;
+  padding: 32px 40px 60px;
+}
+
+/* ---- Perfil ---- */
+.perfil {
+  display: flex;
+  gap: 32px;
+}
+.perfil__avatar {
+  color: var(--soft);
+}
+.perfil__datos {
+  flex: 1;
+  min-width: 0;
+}
+.perfil__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.perfil__usuario {
+  margin: 0 !important;
+  font: 900 1.6rem/1.2 var(--f-ui);
+  overflow-wrap: anywhere;
+}
+.perfil__id {
+  margin: 4px 0 0 !important;
+  color: var(--mut);
+}
+.perfil__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px 32px;
+  margin: 20px 0 0;
+}
+.perfil__lista dt {
+  font-weight: 700;
+  font-size: 0.93rem;
+  color: var(--mut);
+}
+.perfil__lista dd {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.perfil__ancho {
+  grid-column: 1 / -1;
+}
+.perfil__vacio {
+  color: var(--mut);
+  font-style: italic;
+}
+
+/* ---- Contraseña y sesión ---- */
+.mis-datos__contrasena {
+  display: grid;
+  gap: 16px;
+}
+.mis-datos__sesion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--soft);
+}
+.mis-datos__sesion p {
+  margin: 0 !important;
+}
+
+/* ---- Eliminar cuenta ---- */
+.mis-datos__texto {
+  max-width: 48em;
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+.mis-datos__balance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px 40px;
+  margin: 20px 0 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--danger-line);
+}
+.mis-datos__balance h3 {
+  margin: 0 0 4px !important;
+  font-size: 0.93rem;
+  color: var(--mut);
+}
+.mis-datos__balance p {
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .mis-datos {
+    padding: 20px 16px 40px;
+  }
+  .perfil {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .perfil__avatar {
+    width: 64px !important;
+    height: 64px !important;
+  }
+}

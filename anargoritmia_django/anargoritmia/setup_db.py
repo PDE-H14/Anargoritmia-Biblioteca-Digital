@@ -1,6 +1,6 @@
 # Inicio de la bd en Mongo
 from db import db
-from pymongo.errors import CollectionInvalid, DuplicateKeyError
+from pymongo.errors import OperationFailure
 
 esquema_nota = {
     "$jsonSchema": {
@@ -13,6 +13,7 @@ esquema_nota = {
             "licencia",
             "id_categoria",
             "contenido",
+            "bloques",
             "es_borrador"
         ],
         "properties": {
@@ -55,27 +56,34 @@ esquema_nota = {
             },
             "contenido": {
                 "bsonType": "string",
-                "description": "Cadena monolítica en Markdown con sintaxis KaTeX embebida."
+                "description": "Texto plano derivado de los bloques de texto públicos (búsqueda y vista previa)."
             },
-            "espacio_interactivo": {
-                "bsonType": ["object", "null"],
-                "description": "Estructura opcional para bloques de código interactivo.",
-                "required": ["codigo_fuente"],
-                "properties": {
-                    "codigo_fuente": {
-                        "bsonType": "string",
-                        "description": "Código en JS/React/JSX a evaluar en el Sandbox."
-                    },
-                    "librerias": {
-                        "bsonType": "array",
-                        "description": "Lista de dependencias externas (ej. ['animejs', 'katex']).",
-                        "items": {"bsonType": "string"}
-                    },
-                    "parametros_iniciales": {
-                        "bsonType": "object",
-                        "description": "Objeto JSON con las variables que alimentan los props del componente."
+            "bloques": {
+                "bsonType": "array",
+                "description": "Celdas de la nota, en orden de lectura.",
+                "items": {
+                    "bsonType": "object",
+                    "required": ["id", "tipo", "publico", "contenido"],
+                    "properties": {
+                        "id": {"bsonType": "string"},
+                        "tipo": {"enum": ["texto", "codigo", "animacion"]},
+                        "publico": {
+                            "bsonType": "bool",
+                            "description": "Si el bloque aparece en la versión publicada."
+                        },
+                        "contenido": {
+                            "bsonType": "string",
+                            "description": "Markdown + KaTeX (texto), código fuente (codigo) o JS de Anime.js (animacion)."
+                        },
+                        "lenguaje": {"bsonType": "string"},
+                        "version": {"bsonType": "string"},
+                        "notas": {"bsonType": "string", "description": "Notas de replicación del código."}
                     }
                 }
+            },
+            "fecha_modificacion": {
+                "bsonType": ["date", "null"],
+                "description": "Último guardado (incluye el autoguardado)."
             },
             "es_borrador": {
                 "bsonType": "bool",
@@ -111,9 +119,10 @@ esquema_categoria = {
                 "bsonType": "string",
                 "description": "Explicación del alcance académico del área."
             },
-            "padre_id": {
-                "bsonType": ["string", "null"],
-                "description": "ID de la categoría superior. Null si es una categoría principal."
+            "padres": {
+                "bsonType": "array",
+                "items": {"bsonType": "string"},
+                "description": "Fichas de las categorías superiores. Vacío si es una categoría raíz."
             },
             "imagen_portada": {
                 "bsonType":["string", "null"],
@@ -122,6 +131,18 @@ esquema_categoria = {
         }
     }
 }
+
+def actualizar_validador(nombre, esquema):
+    """
+    collMod requiere un rol con privilegios de administración (p. ej. dbAdmin
+    o Atlas admin); con un usuario readWrite se informa y se continúa.
+    """
+    try:
+        db.command("collMod", nombre, validator=esquema)
+        print(f"Esquema validador de '{nombre}' actualizado exitosamente.")
+    except OperationFailure as e:
+        print(f"AVISO: no se pudo actualizar el validador de '{nombre}' ({e.details.get('errmsg', e)}). "
+              "Usa un usuario con rol dbAdmin para aplicarlo.")
 
 def inicializar_colecciones():
     colecciones_existentes = db.list_collection_names()
@@ -134,8 +155,7 @@ def inicializar_colecciones():
         except Exception as e:
             print(f"Error al crear 'Nota': {e}")
     else:
-        db.command("collMod", "Nota", validator=esquema_nota)
-        print("Esquema validador de 'Nota' actualizado exitosamente.")
+        actualizar_validador("Nota", esquema_nota)
 
     # --- Gestión de la colección Categoria ---
     if "Categoria" not in colecciones_existentes:
@@ -145,8 +165,7 @@ def inicializar_colecciones():
         except Exception as e:
             print(f"Error al crear 'Categoria': {e}")
     else:
-        db.command("collMod", "Categoria", validator=esquema_categoria)
-        print("Esquema validador de 'Categoria' actualizado exitosamente.")
+        actualizar_validador("Categoria", esquema_categoria)
 
 def inicializar_indices():
     """
@@ -170,9 +189,37 @@ def inicializar_indices():
     except Exception as e:
         print(f"Error al inicializar índices: {e}")
 
+def migrar_notas_a_bloques():
+    """
+    Convierte las notas del modelo anterior (un solo `contenido` Markdown y
+    `espacio_interactivo`) al modelo por bloques. Es idempotente: solo toca
+    notas que aún no tienen `bloques`.
+    """
+    import uuid
+    migradas = 0
+    for nota in db["Nota"].find({"bloques": {"$exists": False}}):
+        publico = not nota.get("es_borrador", True)
+        bloques = []
+        if nota.get("contenido"):
+            bloques.append({"id": uuid.uuid4().hex, "tipo": "texto", "publico": publico,
+                            "contenido": nota["contenido"], "lenguaje": "", "version": "", "notas": ""})
+        interactivo = nota.get("espacio_interactivo") or {}
+        if interactivo.get("codigo_fuente"):
+            bloques.append({"id": uuid.uuid4().hex, "tipo": "animacion", "publico": False,
+                            "contenido": interactivo["codigo_fuente"], "lenguaje": "javascript",
+                            "version": "", "notas": ""})
+        db["Nota"].update_one(
+            {"_id": nota["_id"]},
+            {"$set": {"bloques": bloques, "fecha_modificacion": nota.get("fecha_publicacion")},
+             "$unset": {"espacio_interactivo": ""}},
+        )
+        migradas += 1
+    print(f"Notas migradas al modelo por bloques: {migradas}")
+
 if __name__ == "__main__":
     # Limpieza  de datos de prueba si es entorno de desarrollo
     # db['Categoria'].delete_many({}) 
     
     inicializar_colecciones()
     inicializar_indices()
+    migrar_notas_a_bloques()
