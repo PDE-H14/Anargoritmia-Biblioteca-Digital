@@ -2,8 +2,9 @@ import React, { lazy, Suspense } from "react";
 import routesAdmin from "./routes.admin";
 import routesClient from "./routes.client";
 import { Error404 } from "../pages";
-import { LoginAdmin } from "../pages/Admin";
+import { LoginAdmin, Registro } from "../pages/Admin";
 import { GuestLayout, LOGIN_PATH } from "../layouts";
+import { REGISTRO_PATH } from "../utils/constants";
 import { PublicoLayout } from "../layouts/PublicoLayout";
 
 const SinLayout = ({ children }) => children;
@@ -30,6 +31,12 @@ const routes = [
     path: LOGIN_PATH,
     layout: GuestLayout,
     component: LoginAdmin,
+  },
+  // Alta abierta: cualquiera crea su cuenta para escribir y corregir
+  {
+    path: REGISTRO_PATH,
+    layout: GuestLayout,
+    component: Registro,
   },
   ...routesAdmin,
   ...routesClient,

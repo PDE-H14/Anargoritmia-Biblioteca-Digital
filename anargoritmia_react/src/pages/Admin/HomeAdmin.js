@@ -7,14 +7,10 @@ import { EncabezadoPagina } from "../../components/App";
 import { Aviso, Boton, Cargando, EstadoVacio, EtiquetaEstado, Tarjeta } from "../../components/UI";
 import { RUTAS, editarNota, leerNota } from "../../utils/constants";
 import { fechaCompleta, fechaRelativa } from "../../utils/fechas";
+import { firmaAutor, tiposDeCeldas } from "../../utils/notas";
 import "./HomeAdmin.css";
 
 const CUANTAS = 5;
-
-function tiposDeCeldas(bloques) {
-  const nombres = { texto: "texto", codigo: "código", animacion: "animación" };
-  return [...new Set(bloques.map((b) => nombres[b.tipo]))].join(" + ") || "sin celdas";
-}
 
 /** Recientes (diseño F): tus últimas notas y lo último publicado en la comunidad. */
 export function HomeAdmin() {
@@ -25,7 +21,7 @@ export function HomeAdmin() {
 
   const cargar = useCallback(() => {
     setError(null);
-    Promise.all([getMyNotesApi(auth.token), getPublicNotesApi()])
+    Promise.all([getMyNotesApi(auth.token), getPublicNotesApi({ limite: CUANTAS })])
       .then(([propias, publicadas]) => {
         setMias(propias.slice(0, CUANTAS));
         setComunidad(publicadas.slice(0, CUANTAS));
@@ -90,7 +86,7 @@ export function HomeAdmin() {
                             {n.titulo || "Nota sin título"}
                           </Link>
                           <span className="recientes__meta">
-                            {n.bloques.filter((b) => b.publico).length} de {n.bloques.length} celdas públicas ·{" "}
+                            {n.celdas.publicas} de {n.celdas.total} celdas públicas ·{" "}
                             <time dateTime={fecha || undefined} title={fechaCompleta(fecha)}>
                               {fechaRelativa(fecha)}
                             </time>
@@ -116,7 +112,7 @@ export function HomeAdmin() {
                           {n.titulo}
                         </a>
                         <span className="recientes__meta recientes__meta--mono">
-                          {tiposDeCeldas(n.bloques)} · por {n.autor?.alias} ·{" "}
+                          {tiposDeCeldas(n.celdas)} · {firmaAutor(n.autor) ? `por ${firmaAutor(n.autor)}` : "autoría comunitaria"} ·{" "}
                           <time dateTime={n.fecha_publicacion || undefined} title={fechaCompleta(n.fecha_publicacion)}>
                             {fechaRelativa(n.fecha_publicacion)}
                           </time>

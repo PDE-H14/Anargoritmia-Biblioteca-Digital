@@ -76,10 +76,26 @@ export function useAutoguardado(persistir) {
     if (sucioRef.current) guardarAhora();
   }, [guardarAhora]);
 
+  /**
+   * Ejecuta `tarea` (p. ej. publicar) en la misma cola que el autoguardado:
+   * espera al guardado en curso y ninguno nuevo empieza hasta que termine.
+   * Así dos peticiones nunca compiten con la misma revisión de la nota.
+   */
+  const enCola = useCallback(async (tarea) => {
+    while (enCursoRef.current) await enCursoRef.current;
+    const promesa = (async () => tarea())();
+    enCursoRef.current = promesa.catch(() => {});
+    try {
+      return await promesa;
+    } finally {
+      enCursoRef.current = null;
+    }
+  }, []);
+
   const reiniciar = useCallback(() => {
     sucioRef.current = false;
     setEstado({ fase: "limpio", hora: null, error: null });
   }, []);
 
-  return { estado, marcarCambio, guardarAhora, reiniciar };
+  return { estado, marcarCambio, guardarAhora, enCola, reiniciar };
 }

@@ -1,4 +1,6 @@
 import { BASE_API } from "../utils/constants";
+import { caducidadToken } from "../utils/jwt";
+import { getRefresh, getToken, setRefresh, setToken } from "./token";
 
 const NOMBRES_CAMPOS = {
   username: "Nombre de usuario",
@@ -11,6 +13,13 @@ const NOMBRES_CAMPOS = {
   titulo: "Título",
   id_categoria: "Categoría",
   bloques: "Celdas",
+  password_actual: "Contraseña actual",
+  firma: "Firma",
+  archivo: "Archivo",
+  id_bloque: "Celda",
+  tipo_error: "Tipo de error",
+  fragmento: "Pasaje",
+  revision: "Revisión",
 };
 
 /**
@@ -39,10 +48,71 @@ export function formatApiError(data) {
  * - Devuelve null en respuestas sin cuerpo (204 No Content).
  */
 export const EVENTO_SESION_EXPIRADA = "anargoritmia:sesion-expirada";
+export const EVENTO_TOKEN_RENOVADO = "anargoritmia:token-renovado";
 
-export async function apiFetch(path, { token, json, ...options } = {}) {
+const MARGEN_RENOVACION_MS = 30 * 1000;
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+let renovacionEnCurso = null;
+
+/**
+ * Pide un token de acceso nuevo con el de renovación (que también rota).
+ * Devuelve el token nuevo; null si la sesión ya no es válida (hay que
+ * volver a entrar); undefined si no se pudo saber (sin red, error 5xx).
+ * Una sola renovación a la vez, aunque varias peticiones la pidan.
+ */
+export function renovarSesion() {
+  if (!renovacionEnCurso) {
+    renovacionEnCurso = (async () => {
+      const refresh = getRefresh();
+      if (!refresh) return null;
+      let response;
+      try {
+        response = await fetch(`${BASE_API}/api/auth/renovar/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh }),
+        });
+      } catch {
+        return undefined;
+      }
+      if (!response.ok) {
+        if (response.status !== 401) return undefined;
+        // Otra pestaña pudo rotar el token al mismo tiempo: si ya guardó uno nuevo, se usa
+        await esperar(400);
+        return getRefresh() !== refresh ? getToken() : null;
+      }
+      const data = await response.json();
+      setToken(data.access);
+      if (data.refresh) setRefresh(data.refresh);
+      window.dispatchEvent(new CustomEvent(EVENTO_TOKEN_RENOVADO, { detail: data.access }));
+      return data.access;
+    })().finally(() => {
+      renovacionEnCurso = null;
+    });
+  }
+  return renovacionEnCurso;
+}
+
+function porCaducar(token) {
+  const fecha = caducidadToken(token);
+  return !!fecha && fecha.getTime() - Date.now() < MARGEN_RENOVACION_MS;
+}
+
+/**
+ * `token` indica que la petición va autenticada. Se usa siempre el token más
+ * reciente guardado (pudo renovarse en otra petición o pestaña); si está por
+ * caducar se renueva antes, y si el servidor responde 401 se renueva y se
+ * reintenta una vez. Solo si la renovación se rechaza termina la sesión.
+ */
+export async function apiFetch(path, { token, json, ...options } = {}, esReintento = false) {
+  let vigente = token ? getToken() || token : null;
+  if (vigente && !esReintento && porCaducar(vigente)) {
+    vigente = (await renovarSesion()) || vigente;
+  }
+
   const headers = { ...(options.headers || {}) };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (vigente) headers.Authorization = `Bearer ${vigente}`;
   if (json !== undefined) {
     headers["Content-Type"] = "application/json";
     options.body = JSON.stringify(json);
@@ -59,9 +129,16 @@ export async function apiFetch(path, { token, json, ...options } = {}) {
     throw sinConexion;
   }
 
-  // Token rechazado (expirado o inválido): la sesión termina de forma explícita
+  // Token rechazado: se intenta renovar una vez; si la renovación también se
+  // rechaza, la sesión termina de forma explícita
   if (response.status === 401 && token) {
-    window.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA));
+    if (!esReintento) {
+      const nuevo = await renovarSesion();
+      if (nuevo) return apiFetch(path, { token: nuevo, json, ...options }, true);
+      if (nuevo === null) window.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA));
+    } else {
+      window.dispatchEvent(new CustomEvent(EVENTO_SESION_EXPIRADA));
+    }
   }
 
   let data = null;

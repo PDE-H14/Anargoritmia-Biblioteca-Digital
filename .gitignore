@@ -11,8 +11,10 @@
 .env.production.local
 
 # --- Persistencia y Bases de Datos Volátiles ---
-db.sqlite3
-db.sqlite3-journal
+db.sqlite3*
+
+# Archivos subidos desde la app (portadas de categorías): son datos, no código
+uploads/
 
 # Archivos de volcado o copias de seguridad de MongoDB
 # (no se ignora *.json: package.json y manifest.json deben versionarse)

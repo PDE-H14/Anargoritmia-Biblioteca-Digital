@@ -2,7 +2,8 @@
 
 > **Infraestructura web soberana y de acceso abierto para la centralización, procesamiento interactivo y liberación de la producción científica de la Licenciatura en Matemática Algorítmica (ESFM - IPN).**
 
-[![Licencia: CC BY-SA 4.0](https://img.shields.io/badge/Licencia-CC%20BY--SA%204.0-yellow.svg)](https://creativecommons.org/licenses/by-sa/4.0/deed.es)
+[![Contenido: CC BY-SA 4.0](https://img.shields.io/badge/Contenido-CC%20BY--SA%204.0-yellow.svg)](https://creativecommons.org/licenses/by-sa/4.0/deed.es)
+[![Código: AGPL-3.0](https://img.shields.io/badge/C%C3%B3digo-AGPL--3.0-blue.svg)](LICENSE)
 [![Stack: Django + React + MongoDB](https://img.shields.io/badge/Stack-Django%20%7C%20React%20%7C%20MongoDB-006600.svg)](#-arquitectura-y-pila-tecnológica)
 [![Idioma: Español Nativo](https://img.shields.io/badge/Idioma-Español%20Nativo-red.svg)](#-análisis-crítico-y-posicionamiento-materialista)
 [![Copyleft: Inalienable](https://img.shields.io/badge/Copyleft-Garantizado-blue.svg)](#-licenciamiento-y-soberanía)
@@ -128,6 +129,7 @@ python setup_db.py
 python manage.py runserver
 🧪 Matriz de Endpoints y Verificación HTTP
 La API cuenta con documentación interactiva en OpenAPI / Swagger en la ruta /doc/.
+POST   /api/auth/registro/       --> Alta abierta de cuenta, sin privilegios de administrador
 GET    /api/categorias/          --> Consulta pública de taxonomías
 POST   /api/categorias/          --> Creación de categoría (Requiere JWT)
 PUT    /api/categorias/{ficha}/  --> Actualización total (Requiere JWT)
@@ -139,6 +141,6 @@ POST   /api/notas/               --> Inyección de nota científica + Sandbox (R
 ⚖️ Licenciamiento y Soberanía
 Contenido y Producción Científica: Distribuidos inalienablemente bajo la licencia Creative Commons Atribución-CompartirIgual 4.0 Internacional (CC BY-SA 4.0)
 .
-Código Fuente del Software: Liberado bajo principios de Software Libre (Copyleft) para garantizar que los medios de producción continúen perteneciendo a la comunidad estudiantil
+Código Fuente del Software: GNU Affero General Public License v3.0 (AGPL-3.0); el texto completo está en el archivo LICENSE. Es copyleft también para quien ofrezca el sistema modificado como servicio web: debe publicar sus cambios, de modo que los medios de producción continúen perteneciendo a la comunidad estudiantil
 .
   Omnia sunt communia! (¡Todo es de todos!)

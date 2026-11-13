@@ -1,8 +1,13 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Campo } from "../../../../components/UI";
+import { RUTAS } from "../../../../utils/constants";
 
-/** Panel lateral «Datos de la nota»: título, categoría, ficha, autoría y licencia fija. */
-export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, onCambiar }) {
+/**
+ * Panel lateral «Datos de la nota»: título, categoría, ficha, autoría,
+ * licencia fija y, debajo (children), las correcciones de lectores.
+ */
+export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esMia, onCambiar, children }) {
   return (
     <aside className="datos-nota" aria-labelledby="datos-nota-titulo">
       <h2 id="datos-nota-titulo" className="datos-nota__titulo">
@@ -33,7 +38,17 @@ export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, onC
         <input readOnly value={ficha || ""} />
       </Campo>
 
-      <Campo id="nota-autoria" etiqueta="Autoría">
+      <Campo
+        id="nota-autoria"
+        etiqueta="Autoría"
+        ayuda={
+          esMia ? (
+            <>
+              Firma pública. Elige alias o nombre completo en <Link to={RUTAS.MIS_DATOS}>Mis datos</Link>.
+            </>
+          ) : null
+        }
+      >
         <input readOnly value={autoria} />
       </Campo>
 
@@ -44,6 +59,8 @@ export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, onC
         <p className="sello-licencia">CC BY-SA 4.0</p>
         <p className="datos-nota__nota">Fija para todo el contenido. No se puede cambiar ni ceder.</p>
       </div>
+
+      {children}
     </aside>
   );
 }

@@ -8,6 +8,8 @@ import { EncabezadoPagina } from "../../../components/App";
 import { Aviso, Boton, Campo, Dialogo, Logo, Tarjeta } from "../../../components/UI";
 import { LOGIN_PATH } from "../../../utils/constants";
 import { textoCaducidad } from "../../../utils/jwt";
+import { getRefresh } from "../../../api/token";
+import { firmaPropia } from "../../../utils/notas";
 import "./Me.css";
 
 const PATRON_USUARIO = /^[\w.@+-]+$/;
@@ -26,9 +28,10 @@ export function Me() {
   };
 
   // Recarga los datos de sesión (nombre del menú lateral incluido)
-  const refrescar = () => login(auth.token);
+  const refrescar = () => login();
 
-  const caducidad = textoCaducidad(auth.token);
+  // La sesión dura lo que el token de renovación, que se extiende con el uso
+  const caducidad = textoCaducidad(getRefresh());
 
   return (
     <>
@@ -67,13 +70,17 @@ export function Me() {
           </div>
         </Tarjeta>
 
+        <Tarjeta titulo="Firma de tus notas">
+          <FormularioFirma me={me} token={auth.token} onGuardada={refrescar} />
+        </Tarjeta>
+
         <Tarjeta titulo="Contraseña y sesión">
-          <FormularioContrasena token={auth.token} />
+          <FormularioContrasena token={auth.token} onSesionNueva={(t) => login(t.access, t.refresh)} />
           <div className="mis-datos__sesion">
             <p>
               {caducidad
-                ? `Tu sesión usa un token JWT que caduca ${caducidad}.`
-                : "Tu sesión usa un token JWT guardado solo en este navegador."}
+                ? `Tu sesión se renueva sola mientras la uses; si no entras, caduca ${caducidad}.`
+                : "Tu sesión se renueva sola mientras la uses y caduca tras 7 días sin actividad."}
             </p>
             <Boton variante="enlace" onClick={salir}>
               Cerrar sesión
@@ -130,12 +137,62 @@ export function Me() {
   );
 }
 
-/*
- * Cambio de contraseña.
- * PENDIENTE (backend): la API no verifica la contraseña actual al cambiarla,
- * así que no se pide; en su lugar se confirma la nueva dos veces.
+/**
+ * Con qué se firman tus notas y correcciones: alias (por omisión) o nombre
+ * completo. Se aplica también a lo que ya publicaste.
  */
-function FormularioContrasena({ token }) {
+function FormularioFirma({ me, token, onGuardada }) {
+  const [guardando, setGuardando] = useState(null);
+  const nombre = [me.first_name, me.last_name].map((p) => (p || "").trim()).filter(Boolean).join(" ");
+  const actual = me.firma || "alias";
+
+  const elegir = async (firma) => {
+    if (firma === actual) return;
+    setGuardando(firma);
+    try {
+      await updateMeApi({ firma }, token);
+      await onGuardada();
+      toast.success("Firma actualizada en todas tus notas.");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setGuardando(null);
+    }
+  };
+
+  const opciones = [
+    { valor: "alias", titulo: "Alias", ejemplo: me.username },
+    { valor: "nombre", titulo: "Nombre completo", ejemplo: nombre || "Sin nombre: se usará tu alias" },
+  ];
+
+  return (
+    <div className="firma">
+      <p className="mis-datos__texto">
+        Así apareces en la lectura y el catálogo. Hoy tus notas se firman como <strong>{firmaPropia(me)}</strong>.
+      </p>
+      <div className="firma__opciones" role="radiogroup" aria-label="Firmar mis notas con">
+        {opciones.map(({ valor, titulo, ejemplo }) => (
+          <button
+            key={valor}
+            type="button"
+            role="radio"
+            aria-checked={actual === valor}
+            className="firma__opcion"
+            disabled={!!guardando}
+            onClick={() => elegir(valor)}
+          >
+            <strong>{titulo}</strong>
+            <span className="firma__ejemplo">{guardando === valor ? "Guardando…" : ejemplo}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* Cambio de contraseña: la API exige la actual para aceptar la nueva. */
+function FormularioContrasena({ token, onSesionNueva }) {
+  const [actual, setActual] = useState("");
   const [nueva, setNueva] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
   const [errores, setErrores] = useState({});
@@ -144,6 +201,7 @@ function FormularioContrasena({ token }) {
   const enviar = async (e) => {
     e.preventDefault();
     const encontrados = {};
+    if (!actual) encontrados.actual = "Escribe tu contraseña actual.";
     if (nueva.length < 8) encontrados.nueva = "Usa al menos 8 caracteres.";
     if (confirmacion !== nueva) encontrados.confirmacion = "No coincide con la contraseña nueva.";
     setErrores(encontrados);
@@ -151,12 +209,16 @@ function FormularioContrasena({ token }) {
 
     setEnviando(true);
     try {
-      await updateMeApi({ password: nueva }, token);
+      const respuesta = await updateMeApi({ password: nueva, password_actual: actual }, token);
+      // Las demás sesiones se cerraron; esta sigue con los tokens nuevos
+      if (respuesta?.tokens) await onSesionNueva(respuesta.tokens);
+      setActual("");
       setNueva("");
       setConfirmacion("");
-      toast.success("Contraseña actualizada.");
+      toast.success("Contraseña actualizada. Se cerró la sesión en tus otros dispositivos.");
     } catch (error) {
-      setErrores({ general: error.message });
+      if (error.data?.password_actual) setErrores({ actual: [].concat(error.data.password_actual).join(" ") });
+      else setErrores({ general: error.message });
     } finally {
       setEnviando(false);
     }
@@ -164,6 +226,14 @@ function FormularioContrasena({ token }) {
 
   return (
     <form className="mis-datos__contrasena" onSubmit={enviar} noValidate>
+      <Campo id="contrasena-actual" etiqueta="Contraseña actual" error={errores.actual}>
+        <input
+          type="password"
+          autoComplete="current-password"
+          value={actual}
+          onChange={(e) => setActual(e.target.value)}
+        />
+      </Campo>
       <div className="dialogo__fila">
         <Campo id="contrasena-nueva" etiqueta="Contraseña nueva" error={errores.nueva}>
           <input type="password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} />

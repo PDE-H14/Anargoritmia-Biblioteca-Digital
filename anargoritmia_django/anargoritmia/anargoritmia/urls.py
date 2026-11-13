@@ -33,7 +33,7 @@ schema_view = get_schema_view(
       description="Documentación de la API de Anargoritmia",
       terms_of_service="",
       contact=openapi.Contact(email="escamilla.huerta.porfirio@gmail.local"),
-      license=openapi.License(name="BSD License"),
+      license=openapi.License(name="AGPL-3.0", url="https://www.gnu.org/licenses/agpl-3.0.html"),
    ),
    public=True,
    permission_classes=(permissions.AllowAny,),

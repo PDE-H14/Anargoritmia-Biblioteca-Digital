@@ -104,7 +104,8 @@ export function MyNotes() {
             </thead>
             <tbody>
               {notas.map((nota) => {
-                const publicas = nota.bloques.filter((b) => b.publico).length;
+                const { publicas, total } = nota.celdas;
+                const correcciones = nota.correcciones_abiertas || 0;
                 const titulo = nota.titulo || "Nota sin título";
                 const fecha = nota.fecha_modificacion || nota.fecha_publicacion;
                 const categoria = categorias[nota.id_categoria];
@@ -112,13 +113,22 @@ export function MyNotes() {
                   <tr key={nota.id_documento}>
                     <td className="mis-notas__titulo">
                       <Link to={editarNota(nota.id_documento)}>{titulo}</Link>
+                      {correcciones > 0 && (
+                        <Link
+                          to={`${editarNota(nota.id_documento)}#correcciones`}
+                          className="mis-notas__correcciones"
+                          title="Correcciones de lectores por atender"
+                        >
+                          {correcciones} {correcciones === 1 ? "corrección" : "correcciones"}
+                        </Link>
+                      )}
                     </td>
                     <td>
                       <EtiquetaEstado borrador={nota.es_borrador} />
                     </td>
                     <td className={categoria ? "" : "tabla__secundario"}>{categoria || "Sin categoría"}</td>
                     <td>
-                      {publicas} de {nota.bloques.length}
+                      {publicas} de {total}
                     </td>
                     <td className="mis-notas__fecha">
                       <time dateTime={fecha || undefined} title={fechaCompleta(fecha)}>

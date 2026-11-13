@@ -5,6 +5,7 @@ import { getCategoriesApi } from "../../../api/category";
 import { getPublicNotesApi } from "../../../api/note";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
 import { RUTAS, leerNota } from "../../../utils/constants";
+import { firmaAutor, tiposDeCeldas } from "../../../utils/notas";
 import "./Portada.css";
 
 const PRINCIPIOS = [
@@ -26,13 +27,9 @@ const PRINCIPIOS = [
   },
 ];
 
-const NOMBRES_TIPO = { texto: "texto", codigo: "código", animacion: "animación" };
-
 function metaNota(nota) {
-  const tipos = [...new Set(nota.bloques.map((b) => NOMBRES_TIPO[b.tipo]))].join(" + ") || "sin celdas";
-  const alias = nota.autor?.alias;
-  const autoria = !alias || alias === "Comunidad Anargoritmia" ? "autoría comunitaria" : `por ${alias}`;
-  return `${tipos} · ${autoria}`;
+  const firma = firmaAutor(nota.autor);
+  return `${tiposDeCeldas(nota.celdas)} · ${firma ? `por ${firma}` : "autoría comunitaria"}`;
 }
 
 /** Portada pública (diseño F). */

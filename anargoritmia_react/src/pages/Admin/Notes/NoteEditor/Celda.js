@@ -20,27 +20,54 @@ const EXTENSIONES = {
   rust: "rs", go: "go", sql: "sql", bash: "sh", latex: "tex",
 };
 
-/*
- * Nombre de archivo que se muestra en la cabecera («2:codigo.py»).
- * PENDIENTE (rediseño de la colección de notas): la API aún no guarda un
- * nombre por celda; mientras tanto se deriva del tipo y del lenguaje.
- */
-export function nombreArchivo(bloque, indice) {
-  let nombre = "texto.md";
-  if (bloque.tipo === "animacion") nombre = "animacion.js";
+/** Nombre de archivo sugerido mientras la celda no tenga uno propio (según tipo y lenguaje). */
+export function nombreSugerido(bloque) {
+  if (bloque.tipo === "animacion") return "animacion.js";
   if (bloque.tipo === "codigo") {
     const lenguaje = (bloque.lenguaje || "").toLowerCase().trim().split(/\s+/)[0];
-    nombre = `codigo.${EXTENSIONES[lenguaje] || "txt"}`;
+    return `codigo.${EXTENSIONES[lenguaje] || "txt"}`;
   }
-  return `${indice + 1}:${nombre}`;
+  return "texto.md";
+}
+
+// Lo que acepta la API: letras, números, punto, guion y guion bajo
+function limpiarArchivo(valor) {
+  return valor.replace(/\s+/g, "_").replace(/[^\p{L}\p{N}_.-]/gu, "").slice(0, 80);
 }
 
 /** Celda del taller: tarjeta con cabecera de controles y su editor. */
-export function Celda({ bloque, indice, total, onCambiar, onMover, onEliminar, onSiguiente, registrarEditor }) {
-  const { id, tipo, publico, contenido, lenguaje, version, notas } = bloque;
-  const archivo = nombreArchivo(bloque, indice);
+export function Celda({
+  bloque,
+  indice,
+  total,
+  correcciones = 0,
+  onCambiar,
+  onMover,
+  onEliminar,
+  onSiguiente,
+  onVerCorrecciones,
+  registrarEditor,
+}) {
+  const { id, tipo, publico, contenido, lenguaje, version, notas, archivo = "", titulo = "" } = bloque;
+  const sugerido = nombreSugerido(bloque);
   const cambiar = (campos) => onCambiar(id, campos);
   const siguiente = () => onSiguiente(id);
+
+  const campoTitulo = (
+    <div className="campo">
+      <label className="campo__etiqueta" htmlFor={`titulo-${id}`}>
+        {tipo === "codigo" ? "Título del algoritmo" : "Título de la animación"}
+      </label>
+      <input
+        id={`titulo-${id}`}
+        className="campo__control"
+        maxLength={200}
+        placeholder={tipo === "codigo" ? "p. ej. Método de Newton-Raphson" : "p. ej. Rotación de un polígono"}
+        value={titulo}
+        onChange={(e) => cambiar({ titulo: e.target.value })}
+      />
+    </div>
+  );
 
   return (
     <article className={`celda ${publico ? "" : "celda--privada"}`} aria-label={`Celda ${indice + 1}: ${TIPOS[tipo]}`}>
@@ -48,10 +75,32 @@ export function Celda({ bloque, indice, total, onCambiar, onMover, onEliminar, o
         <p className="celda__titulo">
           <strong>{TIPOS[tipo]}</strong>
           <span className="celda__archivo">
-            {archivo}
-            {!publico && " · solo tú la ves"}
+            <span aria-hidden="true">{indice + 1}:</span>
+            <input
+              className="celda__archivo-campo"
+              value={archivo}
+              placeholder={sugerido}
+              size={Math.max(8, (archivo || sugerido).length)}
+              maxLength={80}
+              spellCheck={false}
+              aria-label={`Nombre de archivo de la celda ${indice + 1}`}
+              title="Nombre de archivo (opcional)"
+              onChange={(e) => cambiar({ archivo: limpiarArchivo(e.target.value) })}
+            />
+            {!publico && <span> · solo tú la ves</span>}
           </span>
         </p>
+
+        {correcciones > 0 && (
+          <button
+            type="button"
+            className="celda__correcciones"
+            onClick={() => onVerCorrecciones?.(id)}
+            title="Correcciones de lectores sobre esta celda"
+          >
+            {correcciones} {correcciones === 1 ? "corrección" : "correcciones"}
+          </button>
+        )}
 
         <div className="segmentado" role="group" aria-label="Visibilidad de la celda">
           <button type="button" aria-pressed={publico} onClick={() => cambiar({ publico: true })}>
@@ -149,6 +198,7 @@ export function Celda({ bloque, indice, total, onCambiar, onMover, onEliminar, o
                 onChange={(e) => cambiar({ version: e.target.value })}
               />
             </div>
+            <div className="celda__campo-ancho">{campoTitulo}</div>
           </div>
           <PozoCodigo
             ref={(el) => registrarEditor(id, el)}
@@ -180,6 +230,9 @@ export function Celda({ bloque, indice, total, onCambiar, onMover, onEliminar, o
 
       {tipo === "animacion" && (
         <>
+          <div className="celda__campos">
+            <div className="celda__campo-ancho">{campoTitulo}</div>
+          </div>
           <PozoCodigo
             ref={(el) => registrarEditor(id, el)}
             valor={contenido}

@@ -7,6 +7,7 @@ import tempfile
 from unittest import mock
 
 import mongomock
+from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
@@ -16,12 +17,14 @@ MODULOS_CON_DB = [
     "notas.api.views",
     "notas.api.serializers",
     "notas.servicios",
+    "notas.api.correcciones",
 ]
 
 
 class MongoAPITestCase(APITestCase):
     def setUp(self):
         super().setUp()
+        cache.clear()  # los límites de peticiones (throttling) no pasan de una prueba a otra
         self.db = mongomock.MongoClient()["AnargoritmiaPruebas"]
         self.db["Categoria"].create_index("ficha", unique=True)
         self.db["Categoria"].create_index("id_categoria", unique=True)

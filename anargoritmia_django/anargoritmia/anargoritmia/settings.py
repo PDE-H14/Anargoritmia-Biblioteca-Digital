@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # revocar sesiones (salir, cambio de contraseña)
     'drf_yasg',
 
     # Módulos del proyecto Anargoritmia
@@ -133,7 +134,12 @@ REST_FRAMEWORK = {
 
         #unico
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    # Límite de correcciones comunitarias por persona (ver notas/api/correcciones.py)
+    'DEFAULT_THROTTLE_RATES': {
+        'correcciones': '30/hour',
+        'registro': '10/hour',  # altas de cuenta por dirección IP (usuarios/api/views.py)
+    },
 }
 
 # Internationalization
@@ -166,6 +172,17 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+# Sesión: un token de acceso corto y uno de renovación que rota en cada uso.
+# Un token robado sirve como mucho 15 minutos; la sesión sigue abierta
+# mientras se use y caduca tras 7 días sin actividad. Al salir o al cambiar
+# la contraseña, los tokens de renovación se revocan (lista negra).
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(days=120)
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    # Clave propia de los JWT: cambiarla invalida todas las sesiones sin tocar
+    # SECRET_KEY. El sufijo «v2» anuló los tokens de 120 días anteriores.
+    "SIGNING_KEY": os.getenv("JWT_SIGNING_KEY") or f"{SECRET_KEY}:jwt-v2",
 }

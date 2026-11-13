@@ -114,6 +114,19 @@
   text-underline-offset: 3px;
 }
 
+/* ---- Crear cuenta ---- */
+.acceso__intro {
+  margin: -10px 0 0 !important;
+  color: var(--soft);
+  line-height: 1.5;
+}
+/* Nombre y apellidos lado a lado; se apilan en pantallas angostas */
+.acceso__fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 22px;
+}
+
 /* ---- Móvil: la marca se apila arriba, compacta ---- */
 @media (max-width: 860px) {
   .acceso {

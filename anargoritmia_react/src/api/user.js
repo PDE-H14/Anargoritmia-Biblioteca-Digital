@@ -11,6 +11,16 @@ export async function loginApi(formValues) {
   }
 }
 
+// Crea una cuenta (sin privilegios) y devuelve sus datos con un par de tokens
+export function registroApi(datos) {
+  return apiFetch("/api/auth/registro/", { method: "POST", json: datos });
+}
+
+// Revoca el token de renovación en el servidor (salir de verdad, no solo olvidar el token)
+export function logoutApi(refresh) {
+  return apiFetch("/api/auth/salir/", { method: "POST", json: { refresh } });
+}
+
 export function getMeApi(token) {
   return apiFetch("/api/auth/me/", { token });
 }

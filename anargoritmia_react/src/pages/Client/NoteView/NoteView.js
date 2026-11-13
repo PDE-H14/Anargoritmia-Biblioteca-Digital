@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import { useAuth } from "../../../hooks";
 import { getNoteApi } from "../../../api/note";
-import { getCategoriesApi } from "../../../api/category";
-import { MarkdownView } from "../../../components/Notes";
+import { DialogoCorreccion, MarkdownView } from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
-import { editarNota } from "../../../utils/constants";
+import { LOGIN_PATH, editarNota } from "../../../utils/constants";
+import { firmaAutor } from "../../../utils/notas";
 import "./NoteView.css";
 
 const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación" };
-const ALIAS_COMUNIDAD = "Comunidad Anargoritmia";
 
 /**
  * Lectura (diseño F): solo celdas públicas (el servidor filtra las privadas).
@@ -20,9 +20,11 @@ const ALIAS_COMUNIDAD = "Comunidad Anargoritmia";
 export function NoteView() {
   const { id } = useParams();
   const { auth } = useAuth();
+  const location = useLocation();
   const [nota, setNota] = useState(null);
-  const [categoria, setCategoria] = useState(null);
   const [error, setError] = useState(null);
+  // Celda sobre la que se propone una corrección (null: diálogo cerrado)
+  const [corrigiendo, setCorrigiendo] = useState(null);
 
   useEffect(() => {
     setNota(null);
@@ -38,13 +40,6 @@ export function NoteView() {
     };
   }, [id, auth]);
 
-  useEffect(() => {
-    if (!nota?.id_categoria) return;
-    getCategoriesApi()
-      .then((lista) => setCategoria((lista || []).find((c) => c.id_categoria === nota.id_categoria) || null))
-      .catch(() => setCategoria(null));
-  }, [nota?.id_categoria]);
-
   if (error) {
     return (
       <div className="lectura-mensaje">
@@ -58,9 +53,10 @@ export function NoteView() {
   if (!nota) return <Cargando texto="Cargando nota…" />;
 
   const esAutor = auth && nota.autor?.id_usuario === String(auth.me?.id);
-  const alias = nota.autor?.alias;
-  // PENDIENTE (rediseño de notas): la API solo entrega el alias, no el nombre completo
-  const autoria = !alias || alias === ALIAS_COMUNIDAD ? "Autoría comunitaria" : alias;
+  const autoria = firmaAutor(nota.autor) || "Autoría comunitaria";
+  const categoria = nota.categoria;
+  // Las correcciones se proponen sobre notas publicadas y no las propone su autor
+  const puedeCorregir = !!auth && !esAutor && !nota.es_borrador;
   const fecha = nota.fecha_publicacion
     ? new Date(nota.fecha_publicacion).toLocaleDateString("es-MX", { dateStyle: "long" })
     : null;
@@ -119,7 +115,15 @@ export function NoteView() {
 
       {nota.bloques.map((bloque, i) => {
         const numero = bloque.tipo === "codigo" ? ++algoritmos : bloque.tipo === "animacion" ? ++animaciones : null;
-        return <FilaCelda key={bloque.id} bloque={bloque} indice={i} numero={numero} />;
+        return (
+          <FilaCelda
+            key={bloque.id}
+            bloque={bloque}
+            indice={i}
+            numero={numero}
+            onCorregir={puedeCorregir ? () => setCorrigiendo(bloque.id) : null}
+          />
+        );
       })}
 
       <footer className="lectura__fila lectura__notas">
@@ -136,15 +140,38 @@ export function NoteView() {
               : puedes copiarla, modificarla y compartirla si atribuyes y conservas la misma licencia.
             </li>
             <li>Las ecuaciones se compilan en tu navegador con KaTeX; el servidor no procesa ni registra tu lectura.</li>
+            {!auth && !nota.es_borrador && nota.bloques.length > 0 && (
+              <li>
+                ¿Encontraste un error?{" "}
+                <Link to={LOGIN_PATH} state={{ from: location }}>
+                  Inicia sesión
+                </Link>{" "}
+                para proponer una corrección sobre la celda donde está.
+              </li>
+            )}
           </ol>
         </div>
       </footer>
+
+      {puedeCorregir && (
+        <DialogoCorreccion
+          abierto={!!corrigiendo}
+          nota={nota}
+          idBloqueInicial={corrigiendo}
+          token={auth.token}
+          onCerrar={() => setCorrigiendo(null)}
+          onEnviada={() => {
+            setCorrigiendo(null);
+            toast.success("Corrección enviada. El autor la verá en su taller.");
+          }}
+        />
+      )}
     </article>
   );
 }
 
-function FilaCelda({ bloque, indice, numero }) {
-  const { tipo, contenido, lenguaje, version, notas } = bloque;
+function FilaCelda({ bloque, indice, numero, onCorregir }) {
+  const { tipo, contenido, lenguaje, version, notas, archivo, titulo } = bloque;
 
   return (
     <section className="lectura__fila" aria-label={`Celda ${indice + 1}: ${TIPOS[tipo]}`}>
@@ -152,6 +179,7 @@ function FilaCelda({ bloque, indice, numero }) {
         <p className="lectura__versalitas">
           Celda {indice + 1} · {TIPOS[tipo]}
         </p>
+        {archivo && <p className="lectura__archivo">{archivo}</p>}
         {tipo === "codigo" && (
           <>
             {lenguaje && <p className="lectura__dato">Lenguaje: {lenguaje}</p>}
@@ -160,6 +188,11 @@ function FilaCelda({ bloque, indice, numero }) {
           </>
         )}
         {tipo === "animacion" && <BotonCopiar texto={contenido} />}
+        {onCorregir && (
+          <button type="button" className="lectura__corregir" onClick={onCorregir}>
+            Señalar un error<span className="solo-lectores"> en la celda {indice + 1}</span>
+          </button>
+        )}
       </div>
 
       <div className="lectura__cuerpo">
@@ -167,11 +200,11 @@ function FilaCelda({ bloque, indice, numero }) {
 
         {tipo !== "texto" && (
           <figure className="lectura__algoritmo">
-            {/* PENDIENTE (rediseño de notas): título propio de cada algoritmo */}
             <figcaption>
               <strong>
                 {tipo === "codigo" ? "Algoritmo" : "Animación"} {numero}.
               </strong>
+              {titulo && ` ${titulo}${/[.!?]$/.test(titulo) ? "" : "."}`}
               {tipo === "codigo" && lenguaje && ` En ${lenguaje}.`}
             </figcaption>
             <pre className="lectura__codigo">

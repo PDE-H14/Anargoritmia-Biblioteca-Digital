@@ -6,6 +6,8 @@ from db import db
 TIPOS_BLOQUE = ("texto", "codigo", "animacion")
 MAX_BLOQUES = 300
 MAX_CARACTERES_BLOQUE = 100_000
+# Nombre de archivo de una celda: letras, números, punto, guion y guion bajo
+PATRON_ARCHIVO = re.compile(r"^[\w.-]{1,80}$")
 
 
 def generar_ficha(texto: str) -> str:
@@ -29,6 +31,12 @@ class AutorSerializer(serializers.Serializer):
     """
     id_usuario = serializers.CharField(max_length=100)
     alias = serializers.CharField(max_length=100)
+    # Texto con el que se firma (alias o nombre completo, según la persona).
+    # Las notas anteriores al rediseño no lo tienen: se usa el alias.
+    firma = serializers.SerializerMethodField()
+
+    def get_firma(self, autor):
+        return autor.get("firma") or autor.get("alias", "")
 
 
 class BloqueSerializer(serializers.Serializer):
@@ -38,16 +46,62 @@ class BloqueSerializer(serializers.Serializer):
     - codigo: código fuente para lectura, con lenguaje, versión y notas de replicación.
     - animacion: código JavaScript (Anime.js) que se ejecutará en un entorno aislado.
     `publico` decide si el bloque aparece en la versión publicada de la nota.
+    `archivo` (p. ej. «newton.py») y `titulo` («Método de Newton») son
+    opcionales; el cliente deriva un nombre si `archivo` queda vacío.
     """
     id = serializers.CharField(max_length=64)
     tipo = serializers.ChoiceField(choices=TIPOS_BLOQUE)
     publico = serializers.BooleanField(default=False)
+    archivo = serializers.CharField(allow_blank=True, default="", max_length=80)
+    titulo = serializers.CharField(allow_blank=True, default="", max_length=200)
     contenido = serializers.CharField(
         allow_blank=True, default="", max_length=MAX_CARACTERES_BLOQUE, trim_whitespace=False
     )
     lenguaje = serializers.CharField(allow_blank=True, default="", max_length=50)
     version = serializers.CharField(allow_blank=True, default="", max_length=50)
     notas = serializers.CharField(allow_blank=True, default="", max_length=5_000)
+
+    def validate_archivo(self, value):
+        value = value.strip()
+        if value and not PATRON_ARCHIVO.match(value):
+            raise serializers.ValidationError(
+                "Usa solo letras, números, punto, guion o guion bajo (sin espacios ni barras)."
+            )
+        return value
+
+    def validate_titulo(self, value):
+        return value.strip()
+
+
+class ResumenCeldasSerializer(serializers.Serializer):
+    """Conteo de celdas que se guarda junto a la nota para los listados."""
+    total = serializers.IntegerField()
+    publicas = serializers.IntegerField()
+    tipos_publicos = serializers.ListField(child=serializers.CharField())
+
+
+class NotaResumenSerializer(serializers.Serializer):
+    """
+    Versión ligera de la nota para listados (catálogo, Mis notas, Recientes):
+    sin el contenido de las celdas, que puede pesar cientos de kilobytes.
+    """
+    id_documento = serializers.CharField()
+    titulo = serializers.CharField()
+    ficha = serializers.CharField()
+    id_categoria = serializers.CharField()
+    autor = AutorSerializer()
+    etiquetas = serializers.ListField(child=serializers.CharField(), default=list)
+    es_borrador = serializers.BooleanField()
+    fecha_publicacion = serializers.DateTimeField(allow_null=True)
+    fecha_modificacion = serializers.DateTimeField(allow_null=True)
+    celdas = ResumenCeldasSerializer()
+    correcciones_abiertas = serializers.IntegerField(required=False)
+
+    def to_representation(self, instancia):
+        datos = super().to_representation(instancia)
+        if "correcciones_abiertas" not in instancia:
+            datos.pop("correcciones_abiertas", None)
+        return datos
 
 
 class NotaSerializer(serializers.Serializer):
@@ -57,6 +111,11 @@ class NotaSerializer(serializers.Serializer):
     ficha = serializers.CharField(read_only=True)
     fecha_publicacion = serializers.DateTimeField(read_only=True)
     fecha_modificacion = serializers.DateTimeField(read_only=True)
+    celdas = ResumenCeldasSerializer(read_only=True)
+    categoria = serializers.DictField(read_only=True, required=False)
+    # Contador de versiones para el control de concurrencia: si se envía,
+    # el guardado solo procede si la nota no cambió desde esa revisión.
+    revision = serializers.IntegerField(required=False, min_value=0)
 
     # Título y categoría pueden quedar vacíos mientras la nota sea borrador
     titulo = serializers.CharField(max_length=255, allow_blank=True, required=False, default="")
@@ -77,9 +136,19 @@ class NotaSerializer(serializers.Serializer):
     )
     es_borrador = serializers.BooleanField(default=True)
 
+    def to_representation(self, instancia):
+        datos = super().to_representation(instancia)
+        datos["revision"] = instancia.get("revision", 0)
+        if "categoria" not in instancia:
+            datos.pop("categoria", None)
+        return datos
+
     def validate_id_categoria(self, value):
         """Integridad referencial: la categoría, si se indica, debe existir."""
-        if value and not db['Categoria'].find_one({"id_categoria": value}):
+        actual = (self.context.get('nota') or {}).get('id_categoria')
+        if value == actual:  # el autoguardado la reenvía sin cambios: no se consulta
+            return value
+        if value and not db['Categoria'].find_one({"id_categoria": value}, {"_id": 1}):
             raise serializers.ValidationError("La categoría especificada no existe.")
         return value
 
@@ -111,7 +180,8 @@ class NotaSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"titulo": "El título debe contener al menos una letra o número."}
                 )
-            if ficha:
+            # Solo se consulta si la ficha cambia; el índice único es la última defensa
+            if ficha and ficha != nota_actual.get('ficha'):
                 self.validar_titulo_unico(ficha)
 
         if not final.get('es_borrador', True):
@@ -137,7 +207,7 @@ class NotaSerializer(serializers.Serializer):
         id_documento = self.context.get('id_documento')
         if id_documento:
             consulta["id_documento"] = {"$ne": id_documento}
-        if db['Nota'].find_one(consulta):
+        if db['Nota'].find_one(consulta, {"_id": 1}):
             raise serializers.ValidationError({
                 "titulo": "Ya existe un documento de este autor con este título."
             })

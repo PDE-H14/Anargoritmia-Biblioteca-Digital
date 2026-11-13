@@ -1,0 +1,169 @@
+/* ---------- Diálogo para proponer una corrección (lectura) ---------- */
+.form-correccion {
+  display: grid;
+  gap: 18px;
+}
+.form-correccion__intro {
+  margin: 0;
+  color: var(--soft);
+  line-height: 1.5;
+}
+
+.form-correccion__tipos {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.form-correccion__tipos legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.opcion-error {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-height: var(--toque);
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radio);
+  cursor: pointer;
+}
+.opcion-error:has(input:checked) {
+  border-color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--fg);
+}
+.opcion-error:has(input:focus-visible) {
+  box-shadow: var(--foco);
+}
+.opcion-error input {
+  margin-top: 3px;
+  accent-color: var(--fg);
+}
+.opcion-error__ayuda {
+  display: block;
+  color: var(--mut);
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+.form-correccion__tipos.campo--error .opcion-error {
+  border-color: var(--acc);
+}
+
+/* ---------- Panel del autor (taller) ---------- */
+.panel-correcciones {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 130px; /* bajo la barra fija del taller */
+}
+.panel-correcciones__cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panel-correcciones__cuenta {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font: 700 0.8rem/1.6 var(--f-mono);
+  vertical-align: middle;
+}
+.panel-correcciones__filtro {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.panel-correcciones__lista {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.correccion {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--warn);
+  border-radius: var(--radio);
+  background: var(--bg);
+}
+.correccion--atendida {
+  border-left-color: var(--ok);
+}
+.correccion--descartada {
+  border-left-color: var(--line-strong);
+  color: var(--soft);
+}
+.correccion p {
+  margin: 0;
+}
+.correccion__celda {
+  font: 400 0.82rem/1.4 var(--f-mono);
+  color: var(--mut);
+}
+.correccion__celda button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.correccion__estado {
+  color: var(--soft);
+  font-weight: 400;
+}
+.correccion__fragmento {
+  margin: 0;
+  padding: 4px 8px;
+  border-left: 2px solid var(--line-strong);
+  background: var(--sur);
+  font: 400 0.85rem/1.4 var(--f-mono);
+  overflow-wrap: anywhere;
+}
+.correccion__descripcion {
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.correccion__meta {
+  color: var(--mut);
+  font-size: 0.85rem;
+}
+.correccion__respuesta {
+  color: var(--soft);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+.correccion__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.correccion__formulario {
+  display: grid;
+  gap: 6px;
+}

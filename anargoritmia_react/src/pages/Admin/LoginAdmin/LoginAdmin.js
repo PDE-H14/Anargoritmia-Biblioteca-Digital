@@ -1,11 +1,41 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../../hooks";
 import { loginApi } from "../../../api/user";
 import { BotonTema } from "../../../components/Common";
 import { Aviso, Boton, Campo, Logo } from "../../../components/UI";
+import { REGISTRO_PATH } from "../../../utils/constants";
 import "./LoginAdmin.css";
+
+/** Pantalla de acceso compartida por Iniciar sesión y Crear cuenta: marca a la izquierda, formulario a la derecha. */
+export function PantallaAcceso({ children }) {
+  return (
+    <div className="acceso">
+      <section className="acceso__marca" aria-label="Anargoritmia">
+        <Link to="/" className="acceso__logo" aria-label="Ir a la portada">
+          <Logo tamano={100} />
+        </Link>
+        <div className="acceso__cartel">
+          <p className="acceso__nombre" aria-hidden="true">
+            <span>Anar</span>
+            <span>goritmia</span>
+          </p>
+          <p className="acceso__descripcion">
+            Biblioteca Algorítmica Digital. Apuntes, algoritmos y simulaciones de la comunidad de la LMA, en español y bajo
+            CC BY-SA 4.0.
+          </p>
+        </div>
+        <p className="acceso__lema">Sin rastreadores · Sin cookies de terceros</p>
+      </section>
+
+      <section className="acceso__panel">
+        <BotonTema className="acceso__tema" />
+        {children}
+      </section>
+    </div>
+  );
+}
 
 /**
  * Acceso (diseño F): marca a la izquierda, formulario a la derecha.
@@ -13,6 +43,7 @@ import "./LoginAdmin.css";
  */
 export function LoginAdmin() {
   const { login } = useAuth();
+  const location = useLocation();
   const [valores, setValores] = useState({ email: "", password: "" });
   const [errores, setErrores] = useState({});
   const [mostrar, setMostrar] = useState(false);
@@ -47,8 +78,8 @@ export function LoginAdmin() {
 
     setEnviando(true);
     try {
-      const { access } = await loginApi({ email: valores.email.trim(), password: valores.password });
-      await login(access);
+      const { access, refresh } = await loginApi({ email: valores.email.trim(), password: valores.password });
+      await login(access, refresh);
     } catch (error) {
       setErrores({ general: error.message || "No se pudo iniciar sesión." });
       setEnviando(false);
@@ -56,26 +87,7 @@ export function LoginAdmin() {
   };
 
   return (
-    <div className="acceso">
-      <section className="acceso__marca" aria-label="Anargoritmia">
-        <Link to="/" className="acceso__logo" aria-label="Ir a la portada">
-          <Logo tamano={100} />
-        </Link>
-        <div className="acceso__cartel">
-          <p className="acceso__nombre" aria-hidden="true">
-            <span>Anar</span>
-            <span>goritmia</span>
-          </p>
-          <p className="acceso__descripcion">
-            Biblioteca Algorítmica Digital. Apuntes, algoritmos y simulaciones de la comunidad de la LMA, en español y bajo
-            CC BY-SA 4.0.
-          </p>
-        </div>
-        <p className="acceso__lema">Sin rastreadores · Sin cookies de terceros</p>
-      </section>
-
-      <section className="acceso__panel">
-        <BotonTema className="acceso__tema" />
+    <PantallaAcceso>
         <form className="acceso__formulario" onSubmit={enviar} noValidate>
           <h1 className="acceso__titulo">Iniciar sesión</h1>
 
@@ -123,10 +135,13 @@ export function LoginAdmin() {
           </Boton>
 
           <p className="acceso__nota">
-            Para leer no hace falta cuenta. <Link to="/">Ir al catálogo</Link>
+            ¿No tienes cuenta?{" "}
+            <Link to={REGISTRO_PATH} state={location.state}>
+              Crea una
+            </Link>
+            . Para leer no hace falta. <Link to="/">Ir al catálogo</Link>
           </p>
         </form>
-      </section>
-    </div>
+    </PantallaAcceso>
   );
 }

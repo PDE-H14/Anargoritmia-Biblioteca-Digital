@@ -18,6 +18,20 @@
   text-underline-offset: 3px;
 }
 
+/* Aviso de correcciones de lectores por atender, bajo el título */
+.mis-notas__titulo a.mis-notas__correcciones {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .mis-notas__fecha {
   white-space: nowrap;
   color: var(--soft);

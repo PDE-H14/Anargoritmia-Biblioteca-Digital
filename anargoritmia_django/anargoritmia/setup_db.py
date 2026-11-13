@@ -31,6 +31,7 @@ esquema_nota = {
                 "properties": {
                     "id_usuario": {"bsonType": "string"},
                     "alias": {"bsonType": "string"},
+                    "firma": {"bsonType": "string", "description": "Texto público: alias o nombre completo, según elija la persona."},
                     "correo": {"bsonType": "string"}
                 }
             },
@@ -75,11 +76,26 @@ esquema_nota = {
                             "bsonType": "string",
                             "description": "Markdown + KaTeX (texto), código fuente (codigo) o JS de Anime.js (animacion)."
                         },
+                        "archivo": {"bsonType": "string", "description": "Nombre de archivo de la celda (p. ej. newton.py)."},
+                        "titulo": {"bsonType": "string", "description": "Título del algoritmo o de la animación."},
                         "lenguaje": {"bsonType": "string"},
                         "version": {"bsonType": "string"},
                         "notas": {"bsonType": "string", "description": "Notas de replicación del código."}
                     }
                 }
+            },
+            "celdas": {
+                "bsonType": "object",
+                "description": "Conteo derivado (total, públicas, tipos públicos) para listados sin cargar las celdas.",
+                "properties": {
+                    "total": {"bsonType": "int"},
+                    "publicas": {"bsonType": "int"},
+                    "tipos_publicos": {"bsonType": "array", "items": {"bsonType": "string"}}
+                }
+            },
+            "revision": {
+                "bsonType": ["int", "long"],
+                "description": "Contador de guardados para el control de concurrencia (409 si cambió)."
             },
             "fecha_modificacion": {
                 "bsonType": ["date", "null"],
@@ -132,6 +148,38 @@ esquema_categoria = {
     }
 }
 
+esquema_correccion = {
+    "$jsonSchema": {
+        "bsonType": "object",
+        "title": "Correccion",
+        "required": ["id_correccion", "id_documento", "id_bloque", "tipo_error",
+                     "descripcion", "autor", "estado", "fecha_creacion"],
+        "properties": {
+            "id_correccion": {"bsonType": "string"},
+            "id_documento": {"bsonType": "string", "description": "Nota corregida."},
+            "id_bloque": {"bsonType": "string", "description": "Celda pública a la que se refiere."},
+            "tipo_bloque": {"enum": ["texto", "codigo", "animacion"]},
+            "tipo_error": {"enum": ["matematico", "codigo", "replicacion", "redaccion", "referencia"]},
+            "fragmento": {"bsonType": "string", "description": "Cita opcional del pasaje exacto."},
+            "descripcion": {"bsonType": "string", "minLength": 20, "maxLength": 2000},
+            "autor": {
+                "bsonType": "object",
+                "required": ["id_usuario", "alias"],
+                "properties": {
+                    "id_usuario": {"bsonType": "string"},
+                    "alias": {"bsonType": "string"},
+                    "firma": {"bsonType": "string"},
+                    "correo": {"bsonType": "string"}
+                }
+            },
+            "estado": {"enum": ["abierta", "atendida", "descartada"]},
+            "respuesta": {"bsonType": "string", "description": "Respuesta del autor de la nota."},
+            "fecha_creacion": {"bsonType": "date"},
+            "fecha_resolucion": {"bsonType": ["date", "null"]}
+        }
+    }
+}
+
 def actualizar_validador(nombre, esquema):
     """
     collMod requiere un rol con privilegios de administración (p. ej. dbAdmin
@@ -167,6 +215,16 @@ def inicializar_colecciones():
     else:
         actualizar_validador("Categoria", esquema_categoria)
 
+    # --- Gestión de la colección Correccion ---
+    if "Correccion" not in colecciones_existentes:
+        try:
+            db.create_collection("Correccion", validator=esquema_correccion)
+            print("Colección 'Correccion' creada exitosamente.")
+        except Exception as e:
+            print(f"Error al crear 'Correccion': {e}")
+    else:
+        actualizar_validador("Correccion", esquema_correccion)
+
 def inicializar_indices():
     """
     Garantiza la unicidad a nivel de motor de base de datos para evitar colisiones.
@@ -184,8 +242,18 @@ def inicializar_indices():
             [("ficha", 1), ("autor.id_usuario", 1)],
             unique=True
         )
-        
-        print("Índices de unicidad configurados con éxito en MongoDB Atlas.")
+
+        # Índices de consulta: cada listado usa uno y no recorre la colección
+        db['Nota'].create_index([("es_borrador", 1), ("fecha_publicacion", -1)])           # catálogo
+        db['Nota'].create_index([("id_categoria", 1), ("es_borrador", 1), ("fecha_publicacion", -1)])  # por categoría
+        db['Nota'].create_index([("autor.id_usuario", 1), ("fecha_modificacion", -1)])     # Mis notas
+        db['Categoria'].create_index("padres")                                             # subcategorías
+
+        db['Correccion'].create_index("id_correccion", unique=True)
+        db['Correccion'].create_index([("id_documento", 1), ("estado", 1), ("fecha_creacion", -1)])
+        db['Correccion'].create_index([("autor.id_usuario", 1), ("id_documento", 1), ("estado", 1)])
+
+        print("Índices de unicidad y de consulta configurados con éxito en MongoDB Atlas.")
     except Exception as e:
         print(f"Error al inicializar índices: {e}")
 
@@ -216,6 +284,33 @@ def migrar_notas_a_bloques():
         migradas += 1
     print(f"Notas migradas al modelo por bloques: {migradas}")
 
+def completar_modelo_rediseno():
+    """
+    Rediseño de notas (nov. 2026), idempotente:
+    - `celdas` (conteo para listados) y `revision` en cada nota;
+    - `archivo` y `titulo` vacíos en cada celda;
+    - `autor.firma` igual al alias (cada persona puede cambiarla en Mis datos).
+    """
+    actualizadas = 0
+    for nota in db["Nota"].find({}):
+        bloques = nota.get("bloques", [])
+        cambios = {}
+        if any("archivo" not in b or "titulo" not in b for b in bloques):
+            bloques = [{"archivo": "", "titulo": "", **b} for b in bloques]
+            cambios["bloques"] = bloques
+        if "celdas" not in nota:
+            publicas = [b for b in bloques if b.get("publico")]
+            tipos = list(dict.fromkeys(b.get("tipo") for b in publicas))
+            cambios["celdas"] = {"total": len(bloques), "publicas": len(publicas), "tipos_publicos": tipos}
+        if "revision" not in nota:
+            cambios["revision"] = 1
+        if "firma" not in nota.get("autor", {}):
+            cambios["autor.firma"] = nota.get("autor", {}).get("alias", "")
+        if cambios:
+            db["Nota"].update_one({"_id": nota["_id"]}, {"$set": cambios})
+            actualizadas += 1
+    print(f"Notas completadas con el modelo del rediseño: {actualizadas}")
+
 if __name__ == "__main__":
     # Limpieza  de datos de prueba si es entorno de desarrollo
     # db['Categoria'].delete_many({}) 
@@ -223,3 +318,4 @@ if __name__ == "__main__":
     inicializar_colecciones()
     inicializar_indices()
     migrar_notas_a_bloques()
+    completar_modelo_rediseno()

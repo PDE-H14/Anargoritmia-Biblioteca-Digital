@@ -114,3 +114,46 @@
     height: 64px !important;
   }
 }
+
+/* ---- Firma de las notas ---- */
+.firma {
+  display: grid;
+  gap: 14px;
+}
+.firma__opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.firma__opcion {
+  display: grid;
+  gap: 4px;
+  min-height: var(--toque);
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radio);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.firma__opcion[aria-checked="true"] {
+  border-color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--fg);
+}
+.firma__opcion[aria-checked="true"] strong::after {
+  content: " ✓";
+}
+.firma__opcion:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+.firma__opcion:disabled {
+  cursor: progress;
+}
+.firma__ejemplo {
+  color: var(--mut);
+  font-size: 0.93rem;
+  overflow-wrap: anywhere;
+}

@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../../hooks";
 import { getNoteApi, createNoteApi, updateNoteApi } from "../../../../api/note";
 import { getCategoriesApi } from "../../../../api/category";
 import { Aviso, Boton, Cargando, DialogoConfirmacion, EtiquetaEstado, Icono } from "../../../../components/UI";
+import { PanelCorrecciones } from "../../../../components/Notes";
 import { NOTA_NUEVA, RUTAS, editarNota, leerNota } from "../../../../utils/constants";
+import { firmaAutor, firmaPropia } from "../../../../utils/notas";
 import { useAutoguardado } from "./useAutoguardado";
 import { Celda, FilaNueva, TIPOS } from "./Celda";
 import { DatosNota } from "./DatosNota";
@@ -23,6 +25,8 @@ function nuevoBloque(tipo) {
     id: nuevoId(),
     tipo,
     publico: false,
+    archivo: "",
+    titulo: "",
     contenido: "",
     lenguaje: tipo === "animacion" ? "javascript" : "",
     version: "",
@@ -34,13 +38,17 @@ function notaVacia() {
   return { titulo: "", id_categoria: "", es_borrador: true, fecha_publicacion: null };
 }
 
-function nombreCompleto(me) {
-  if (!me) return "";
-  return [me.first_name, me.last_name].filter(Boolean).join(" ") || me.username;
-}
-
 // Campos de metadatos que devuelve el servidor y que el editor no edita
-const META_SERVIDOR = ["id_documento", "ficha", "autor", "es_borrador", "fecha_publicacion", "fecha_modificacion"];
+const META_SERVIDOR = [
+  "id_documento",
+  "ficha",
+  "autor",
+  "es_borrador",
+  "fecha_publicacion",
+  "fecha_modificacion",
+  "revision",
+  "celdas",
+];
 
 /**
  * Taller (diseño F): la nota es una lista de celdas de texto (Markdown +
@@ -51,6 +59,7 @@ const META_SERVIDOR = ["id_documento", "ficha", "autor", "es_borrador", "fecha_p
 export function NoteEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const { auth } = useAuth();
   const token = auth.token;
 
@@ -61,6 +70,10 @@ export function NoteEditor() {
   const [errorPublicar, setErrorPublicar] = useState(null);
   const [publicando, setPublicando] = useState(false);
   const [porEliminar, setPorEliminar] = useState(null);
+  // La nota cambió en otra pestaña o dispositivo (409): no se sigue guardando encima
+  const [conflicto, setConflicto] = useState(false);
+  // Correcciones abiertas por celda, para marcarlas en su cabecera
+  const [correccionesPorCelda, setCorreccionesPorCelda] = useState({});
 
   // Editores de cada celda (para mover el foco con Shift+Enter)
   const editores = useRef({});
@@ -68,6 +81,8 @@ export function NoteEditor() {
 
   // Identificador real de la nota (null hasta el primer guardado)
   const idRef = useRef(null);
+  // Última revisión conocida: el servidor rechaza (409) un guardado sobre una versión vieja
+  const revisionRef = useRef(null);
   // Última versión de lo editable, para que el autoguardado nunca use datos viejos
   const datosRef = useRef({});
   datosRef.current = {
@@ -78,9 +93,16 @@ export function NoteEditor() {
 
   const persistir = useCallback(async () => {
     const datos = { ...datosRef.current };
-    const respuesta = idRef.current
-      ? await updateNoteApi(idRef.current, datos, token)
-      : await createNoteApi(datos, token);
+    let respuesta;
+    try {
+      respuesta = idRef.current
+        ? await updateNoteApi(idRef.current, { ...datos, revision: revisionRef.current ?? undefined }, token)
+        : await createNoteApi(datos, token);
+    } catch (error) {
+      if (error.status === 409) setConflicto(true);
+      throw error;
+    }
+    revisionRef.current = respuesta.revision;
 
     if (!idRef.current) {
       idRef.current = respuesta.id_documento;
@@ -97,7 +119,7 @@ export function NoteEditor() {
     });
   }, [token, navigate]);
 
-  const { estado, marcarCambio, guardarAhora, reiniciar } = useAutoguardado(persistir);
+  const { estado, marcarCambio, guardarAhora, enCola, reiniciar } = useAutoguardado(persistir);
 
   // --- Carga ---------------------------------------------------------------
   useEffect(() => {
@@ -118,11 +140,14 @@ export function NoteEditor() {
 
       setErrorCarga(null);
       setErrorPublicar(null);
+      setConflicto(false);
+      setCorreccionesPorCelda({});
       reiniciar();
 
       if (id === NOTA_NUEVA) {
         const primero = nuevoBloque("texto");
         idRef.current = null;
+        revisionRef.current = null;
         setNota(notaVacia());
         setBloques([primero]);
         setEnfocar(primero.id);
@@ -134,6 +159,7 @@ export function NoteEditor() {
       try {
         const datos = await getNoteApi(id, token);
         if (cancelado) return;
+        revisionRef.current = datos.revision ?? null;
         setNota(datos);
         setBloques(datos.bloques || []);
       } catch (error) {
@@ -164,6 +190,15 @@ export function NoteEditor() {
     };
     window.addEventListener("keydown", alTeclear);
     return () => window.removeEventListener("keydown", alTeclear);
+  }, []);
+
+  const irACelda = useCallback((idBloque) => {
+    document.querySelector(`[data-celda="${idBloque}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    editores.current[idBloque]?.focus({ preventScroll: true });
+  }, []);
+
+  const verCorrecciones = useCallback(() => {
+    document.getElementById("correcciones")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, []);
 
   const registrarEditor = useCallback((idBloque, elemento) => {
@@ -254,8 +289,26 @@ export function NoteEditor() {
         setErrorPublicar("No se pudo guardar la nota antes de cambiar su estado.");
         return;
       }
-      const respuesta = await updateNoteApi(idRef.current, { es_borrador: !nota.es_borrador }, token);
-      setNota((n) => ({ ...n, es_borrador: respuesta.es_borrador, fecha_publicacion: respuesta.fecha_publicacion }));
+      const respuesta = await enCola(async () => {
+        try {
+          const r = await updateNoteApi(
+            idRef.current,
+            { es_borrador: !nota.es_borrador, revision: revisionRef.current ?? undefined },
+            token
+          );
+          revisionRef.current = r.revision;
+          return r;
+        } catch (error) {
+          if (error.status === 409) setConflicto(true);
+          throw error;
+        }
+      });
+      setNota((n) => ({
+        ...n,
+        es_borrador: respuesta.es_borrador,
+        fecha_publicacion: respuesta.fecha_publicacion,
+        revision: respuesta.revision,
+      }));
       toast.success(respuesta.es_borrador ? "La nota volvió a borrador." : "Nota publicada.");
     } catch (error) {
       setErrorPublicar(error.message);
@@ -283,7 +336,7 @@ export function NoteEditor() {
   const titulo = nota.titulo || "Nota sin título";
   const publicas = bloques.filter((b) => b.publico).length;
   const esMia = !nota.autor || nota.autor.id_usuario === String(auth.me?.id);
-  const autoria = esMia ? nombreCompleto(auth.me) : nota.autor?.alias;
+  const autoria = esMia ? firmaPropia(auth.me) : firmaAutor(nota.autor) || "Autoría comunitaria";
 
   return (
     <div className="taller">
@@ -324,7 +377,19 @@ export function NoteEditor() {
         </div>
       </div>
 
-      {estado.fase === "error" && (
+      {conflicto ? (
+        <div className="taller__error">
+          <Aviso tipo="error" titulo="Esta nota cambió en otra pestaña o dispositivo">
+            <p>
+              Para no borrar esos cambios, lo que escribas aquí ya no se guarda. Copia lo que necesites conservar y
+              recarga para abrir la versión más reciente.
+            </p>
+            <Boton variante="secundario" onClick={() => window.location.reload()}>
+              Recargar la nota
+            </Boton>
+          </Aviso>
+        </div>
+      ) : estado.fase === "error" && (
         <div className="taller__error">
           <Aviso tipo="advertencia" titulo="Los últimos cambios no se guardaron">
             {estado.error} Se reintentará con tu siguiente edición.
@@ -350,6 +415,8 @@ export function NoteEditor() {
                   bloque={bloque}
                   indice={indice}
                   total={bloques.length}
+                  correcciones={correccionesPorCelda[bloque.id] || 0}
+                  onVerCorrecciones={verCorrecciones}
                   onCambiar={cambiar}
                   onMover={mover}
                   onEliminar={eliminar}
@@ -372,8 +439,18 @@ export function NoteEditor() {
           categorias={categorias}
           ficha={nota.ficha}
           autoria={autoria}
+          esMia={esMia}
           onCambiar={cambiarMeta}
-        />
+        >
+          <PanelCorrecciones
+            idNota={idRef.current}
+            token={token}
+            bloques={bloques}
+            onIrACelda={irACelda}
+            onConteo={setCorreccionesPorCelda}
+            mostrarAlCargar={hash === "#correcciones"}
+          />
+        </DatosNota>
       </div>
 
       <BarraEstado
@@ -381,7 +458,9 @@ export function NoteEditor() {
         celdas={bloques.length}
         publicas={publicas}
         estado={estado}
+        conflicto={conflicto}
         onReintentar={guardarAhora}
+        onVerConflicto={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       />
 
       <DialogoConfirmacion
@@ -405,7 +484,7 @@ export function NoteEditor() {
 }
 
 /** Barra de estado del taller: modo, ficha, conteo y autoguardado. */
-function BarraEstado({ ficha, celdas, publicas, estado, onReintentar }) {
+function BarraEstado({ ficha, celdas, publicas, estado, conflicto, onReintentar, onVerConflicto }) {
   const { fase, hora, error } = estado;
   const horaTexto = hora?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 
@@ -424,7 +503,14 @@ function BarraEstado({ ficha, celdas, publicas, estado, onReintentar }) {
       </span>
       <span className={`barra-estado__guardado ${fase === "error" ? "es-error" : ""}`} aria-live="polite">
         {guardado}
-        {fase === "error" && (
+        {conflicto ? (
+          <>
+            {" "}
+            <button type="button" className="barra-estado__reintentar" onClick={onVerConflicto}>
+              la nota cambió en otro lado
+            </button>
+          </>
+        ) : fase === "error" && (
           <>
             {" "}
             <span className="solo-lectores">: {error}</span>

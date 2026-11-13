@@ -1,7 +1,10 @@
 export const BASE_API = process.env.REACT_APP_BASE_API;
 export const TOKEN = "token";
+export const TOKEN_RENOVACION = "token-renovacion";
 // Login único para usuarios y administradores
 export const LOGIN_PATH = "/login";
+// Alta abierta de cuentas (nunca de administrador)
+export const REGISTRO_PATH = "/registro";
 
 // Rutas de la app. /lab: espacio de trabajo de todo usuario con sesión;
 // /admin: páginas exclusivas de administradores.
