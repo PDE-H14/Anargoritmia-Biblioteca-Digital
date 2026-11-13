@@ -1,6 +1,7 @@
 from anargoritmia.pruebas_mongo import MongoAPITestCase as APITestCase
 
-from usuarios.models import Usuario
+from usuarios import repositorio
+from usuarios.repositorio import crear_usuario
 
 
 class AutogestionTests(APITestCase):
@@ -8,7 +9,7 @@ class AutogestionTests(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.usuario = Usuario.objects.create_user(
+        self.usuario = crear_usuario(
             username="alumno", email="alumno@example.com", password="clave-original-123"
         )
         self.client.force_authenticate(self.usuario)
@@ -18,7 +19,7 @@ class AutogestionTests(APITestCase):
             "/api/auth/me/", {"is_staff": True, "is_active": False}, format="json"
         )
         self.assertEqual(respuesta.status_code, 200)
-        self.usuario.refresh_from_db()
+        self.usuario.recargar()
         self.assertFalse(self.usuario.is_staff)
         self.assertTrue(self.usuario.is_active)
 
@@ -34,7 +35,7 @@ class AutogestionTests(APITestCase):
             format="json",
         )
         self.assertEqual(respuesta.status_code, 200, respuesta.data)
-        self.usuario.refresh_from_db()
+        self.usuario.recargar()
         self.assertTrue(self.usuario.check_password("nueva-clave-456"))
 
     def test_cambio_de_password_exige_la_actual(self):
@@ -45,7 +46,7 @@ class AutogestionTests(APITestCase):
             respuesta = self.client.patch("/api/auth/me/", datos, format="json")
             self.assertEqual(respuesta.status_code, 400)
             self.assertIn("password_actual", respuesta.data)
-        self.usuario.refresh_from_db()
+        self.usuario.recargar()
         self.assertTrue(self.usuario.check_password("clave-original-123"))
 
     def test_firma_por_omision_es_alias(self):
@@ -58,7 +59,7 @@ class AutogestionTests(APITestCase):
 
     def test_password_vacia_no_modifica(self):
         self.client.patch("/api/auth/me/", {"password": "", "first_name": "Ada"}, format="json")
-        self.usuario.refresh_from_db()
+        self.usuario.recargar()
         self.assertTrue(self.usuario.check_password("clave-original-123"))
         self.assertEqual(self.usuario.first_name, "Ada")
 
@@ -68,7 +69,7 @@ class AdministracionUsuariosTests(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.admin = Usuario.objects.create_user(
+        self.admin = crear_usuario(
             username="admin", email="admin@example.com", password="x", is_staff=True
         )
         self.client.force_authenticate(self.admin)
@@ -79,7 +80,7 @@ class AdministracionUsuariosTests(APITestCase):
         }, format="json")
         self.assertEqual(respuesta.status_code, 201)
         self.assertNotIn("password", respuesta.data)
-        self.assertTrue(Usuario.objects.get(email="nuevo@example.com").check_password("clave-789"))
+        self.assertTrue(repositorio.por_email("nuevo@example.com").check_password("clave-789"))
 
     def test_crear_sin_password_responde_400(self):
         respuesta = self.client.post("/api/usuarios/", {
@@ -88,12 +89,12 @@ class AdministracionUsuariosTests(APITestCase):
         self.assertEqual(respuesta.status_code, 400)
 
     def test_put_hashea_password(self):
-        otro = Usuario.objects.create_user(username="otro", email="otro@example.com", password="x")
+        otro = crear_usuario(username="otro", email="otro@example.com", password="x")
         respuesta = self.client.put(f"/api/usuarios/{otro.id}/", {
             "username": "otro", "email": "otro@example.com", "password": "clave-put",
         }, format="json")
         self.assertEqual(respuesta.status_code, 200)
-        otro.refresh_from_db()
+        otro.recargar()
         self.assertTrue(otro.check_password("clave-put"))
 
     def test_listado_no_expone_passwords(self):
@@ -103,7 +104,7 @@ class AdministracionUsuariosTests(APITestCase):
             self.assertNotIn("password", usuario)
 
     def test_no_staff_no_accede(self):
-        alumno = Usuario.objects.create_user(username="a", email="a@example.com", password="x")
+        alumno = crear_usuario(username="a", email="a@example.com", password="x")
         self.client.force_authenticate(alumno)
         self.assertEqual(self.client.get("/api/usuarios/").status_code, 403)
 
@@ -113,20 +114,20 @@ class CandadosAdministradorTests(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.admin = Usuario.objects.create_user(
+        self.admin = crear_usuario(
             username="admin", email="admin@example.com", password="clave-admin", is_staff=True
         )
 
     def test_borrar_mi_cuenta_exige_password_correcta(self):
-        alumno = Usuario.objects.create_user(username="a", email="a@example.com", password="clave-a")
+        alumno = crear_usuario(username="a", email="a@example.com", password="clave-a")
         self.client.force_authenticate(alumno)
         respuesta = self.client.delete("/api/auth/me/", {"password": "mala"}, format="json")
         self.assertEqual(respuesta.status_code, 400)
-        self.assertTrue(Usuario.objects.filter(pk=alumno.pk).exists())
+        self.assertTrue(repositorio.obtener(alumno.id) is not None)
 
         respuesta = self.client.delete("/api/auth/me/", {"password": "clave-a"}, format="json")
         self.assertEqual(respuesta.status_code, 204)
-        self.assertFalse(Usuario.objects.filter(pk=alumno.pk).exists())
+        self.assertFalse(repositorio.obtener(alumno.id) is not None)
 
     def test_unico_admin_no_puede_borrarse(self):
         self.client.force_authenticate(self.admin)
@@ -137,11 +138,11 @@ class CandadosAdministradorTests(APITestCase):
         self.client.force_authenticate(self.admin)
         respuesta = self.client.patch(f"/api/usuarios/{self.admin.id}/", {"is_staff": False}, format="json")
         self.assertEqual(respuesta.status_code, 400)
-        self.admin.refresh_from_db()
+        self.admin.recargar()
         self.assertTrue(self.admin.is_staff)
 
     def test_con_otro_admin_si_puede_quitarse_staff(self):
-        Usuario.objects.create_user(username="b", email="b@example.com", password="x", is_staff=True)
+        crear_usuario(username="b", email="b@example.com", password="x", is_staff=True)
         self.client.force_authenticate(self.admin)
         respuesta = self.client.patch(f"/api/usuarios/{self.admin.id}/", {"is_staff": False}, format="json")
         self.assertEqual(respuesta.status_code, 200)
@@ -152,7 +153,7 @@ class SesionesJWTTests(APITestCase):
 
     def setUp(self):
         super().setUp()
-        self.usuario = Usuario.objects.create_user(
+        self.usuario = crear_usuario(
             username="ada", email="ada@example.com", password="clave-original-123"
         )
 
@@ -200,7 +201,7 @@ class SesionesJWTTests(APITestCase):
 
     def test_admin_desactiva_y_cierra_sesiones(self):
         tokens = self.entrar()
-        admin = Usuario.objects.create_user(username="admin", email="admin@example.com", password="x", is_staff=True)
+        admin = crear_usuario(username="admin", email="admin@example.com", password="x", is_staff=True)
         self.client.force_authenticate(admin)
         self.client.patch(f"/api/usuarios/{self.usuario.id}/", {"is_active": False}, format="json")
         self.client.force_authenticate(None)
@@ -228,7 +229,7 @@ class RegistroTests(APITestCase):
     def test_crea_cuenta_activa_sin_privilegios_y_entrega_tokens(self):
         respuesta = self.client.post(self.URL, self.DATOS, format="json")
         self.assertEqual(respuesta.status_code, 201, respuesta.data)
-        usuario = Usuario.objects.get(username="nueva")
+        usuario = repositorio.por_alias("nueva")
         self.assertTrue(usuario.is_active)
         self.assertFalse(usuario.is_staff)
         self.assertFalse(usuario.is_superuser)
@@ -243,12 +244,12 @@ class RegistroTests(APITestCase):
     def test_no_puede_registrarse_como_administrador(self):
         datos = {**self.DATOS, "is_staff": True, "is_superuser": True}
         self.assertEqual(self.client.post(self.URL, datos, format="json").status_code, 201)
-        usuario = Usuario.objects.get(username="nueva")
+        usuario = repositorio.por_alias("nueva")
         self.assertFalse(usuario.is_staff)
         self.assertFalse(usuario.is_superuser)
 
     def test_correo_y_alias_repetidos_400(self):
-        Usuario.objects.create_user(username="otra", email="nueva@example.com", password="x")
+        crear_usuario(username="otra", email="nueva@example.com", password="x")
         respuesta = self.client.post(self.URL, self.DATOS, format="json")
         self.assertEqual(respuesta.status_code, 400)
         self.assertIn("email", respuesta.data)
@@ -261,9 +262,131 @@ class RegistroTests(APITestCase):
             respuesta = self.client.post(self.URL, {**self.DATOS, "password": clave}, format="json")
             self.assertEqual(respuesta.status_code, 400, clave)
             self.assertIn("password", respuesta.data)
-        self.assertFalse(Usuario.objects.filter(username="nueva").exists())
+        self.assertFalse(repositorio.por_alias("nueva") is not None)
 
     def test_cuenta_nueva_no_entra_al_panel_de_usuarios(self):
         tokens = self.client.post(self.URL, self.DATOS, format="json").data["tokens"]
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
         self.assertEqual(self.client.get("/api/usuarios/").status_code, 403)
+
+
+class CuentasEnMongoTests(APITestCase):
+    """Cuentas y sesiones en MongoDB: acceso, ids, revocación y limpieza de sesiones."""
+
+    def setUp(self):
+        super().setUp()
+        self.usuario = crear_usuario(username="ada", email="ada@example.com", password="clave-original-123")
+
+    def entrar(self, email="ada@example.com", clave="clave-original-123"):
+        return self.client.post("/api/auth/login/", {"email": email, "password": clave}, format="json")
+
+    def test_correo_sin_distinguir_mayusculas_y_datos_malos_401(self):
+        self.assertEqual(self.entrar(email="ADA@Example.com").status_code, 200)
+        self.assertEqual(self.entrar(clave="otra").status_code, 401)
+        self.assertEqual(self.entrar(email="nadie@example.com").status_code, 401)
+
+    def test_entrar_registra_la_sesion_y_la_fecha(self):
+        self.entrar()
+        self.assertEqual(self.db["Sesion"].count_documents({"id_usuario": self.usuario.id}), 1)
+        self.assertIsNotNone(self.usuario.recargar().last_login)
+
+    def test_cuenta_desactivada_no_entra_ni_usa_su_token(self):
+        tokens = self.entrar().data
+        self.usuario.is_active = False
+        repositorio.guardar(self.usuario)
+        self.assertEqual(self.entrar().status_code, 401)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        self.assertEqual(self.client.get("/api/auth/me/").status_code, 401)
+
+    def test_borrar_la_cuenta_cierra_sus_sesiones(self):
+        tokens = self.entrar().data
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {tokens['access']}")
+        self.assertEqual(self.client.delete("/api/auth/me/", {"password": "clave-original-123"}, format="json").status_code, 204)
+        self.assertEqual(self.db["Sesion"].count_documents({}), 0)
+        self.assertEqual(self.client.get("/api/auth/me/").status_code, 401)
+
+    def test_ids_nuevos_siguen_al_mayor_migrado(self):
+        repositorio.ajustar_contador(15)
+        nueva = crear_usuario(username="emmy", email="emmy@example.com", password="x")
+        self.assertEqual(nueva.id, "16")
+        repositorio.ajustar_contador(3)  # nunca retrocede
+        self.assertEqual(crear_usuario(username="sofia", email="sofia@example.com", password="x").id, "17")
+
+    def test_token_de_acceso_no_sirve_para_renovar(self):
+        tokens = self.entrar().data
+        self.assertEqual(self.client.post("/api/auth/renovar/", {"refresh": tokens["access"]}, format="json").status_code, 401)
+
+    def test_actualizar_correo_repetido_400(self):
+        crear_usuario(username="emmy", email="emmy@example.com", password="x")
+        self.client.force_authenticate(self.usuario)
+        respuesta = self.client.patch("/api/auth/me/", {"email": "EMMY@example.com"}, format="json")
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn("email", respuesta.data)
+
+
+class MigracionSqliteTests(APITestCase):
+    """manage.py migrar_usuarios_sqlite conserva ids, contraseñas y autoría."""
+
+    def setUp(self):
+        super().setUp()
+        import os
+        import sqlite3
+        import tempfile
+        from django.contrib.auth.hashers import make_password
+
+        descriptor, self.archivo = tempfile.mkstemp(suffix=".sqlite3")
+        os.close(descriptor)
+        self.addCleanup(os.remove, self.archivo)
+        conexion = sqlite3.connect(self.archivo)
+        conexion.execute(
+            "CREATE TABLE usuarios_usuario (id INTEGER PRIMARY KEY, password TEXT, last_login TEXT, "
+            "is_superuser BOOL, username TEXT, first_name TEXT, last_name TEXT, email TEXT, is_staff BOOL, "
+            "is_active BOOL, date_joined TEXT, firma TEXT)"
+        )
+        filas = [
+            (1, make_password("clave-admin-1"), "2026-11-10 12:00:00.000000", 1, "admin", "", "", "admin@example.com", 1, 1,
+             "2026-08-01 09:30:00", "alias"),
+            (15, make_password("clave-ada-15"), None, 0, "ada", "Ada", "Lovelace", "ada@example.com", 0, 1,
+             "2026-11-11 18:23:45.123456", "nombre"),
+        ]
+        conexion.executemany("INSERT INTO usuarios_usuario VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", filas)
+        conexion.commit()
+        conexion.close()
+
+    def migrar(self, *argumentos):
+        import io
+        from django.core.management import call_command
+
+        salida = io.StringIO()
+        call_command("migrar_usuarios_sqlite", "--archivo", self.archivo, *argumentos, stdout=salida)
+        return salida.getvalue()
+
+    def test_conserva_ids_contrasenas_y_privilegios(self):
+        self.migrar()
+        ada = repositorio.obtener("15")
+        self.assertEqual((ada.username, ada.firma_publica, ada.is_staff), ("ada", "Ada Lovelace", False))
+        self.assertTrue(ada.check_password("clave-ada-15"))
+        self.assertTrue(repositorio.obtener("1").is_staff)
+        self.assertEqual(self.client.post("/api/auth/login/", {"email": "ada@example.com", "password": "clave-ada-15"},
+                                          format="json").status_code, 200)
+        # Las cuentas nuevas siguen la numeración
+        self.assertEqual(crear_usuario(username="emmy", email="emmy@example.com", password="x").id, "16")
+
+    def test_simular_no_escribe_y_repetir_no_duplica(self):
+        self.assertIn("[simulación] 2 migradas", self.migrar("--simular"))
+        self.assertEqual(self.db["Usuario"].count_documents({}), 0)
+        self.migrar()
+        self.migrar()
+        self.assertEqual(self.db["Usuario"].count_documents({}), 2)
+
+    def test_no_pisa_cuentas_nuevas_y_avisa_autores_sin_cuenta(self):
+        # Alguien se registró antes de migrar: recibió el id 1 y usa el correo de ada
+        otra = crear_usuario(username="otra", email="ADA@example.com", password="x")
+        self.assertEqual(otra.id, "1")
+        self.db["Nota"].insert_one({"id_documento": "n1", "ficha": "n1", "autor": {"id_usuario": "99"}})
+        salida = self.migrar()
+        self.assertIn("omitida 1 · admin: en MongoDB el id 1 ya es de otra cuenta (otra)", salida)
+        self.assertIn("omitida 15 · ada: otra cuenta de MongoDB ya usa ese correo", salida)
+        self.assertIn("ids 99", salida)
+        self.assertEqual(repositorio.obtener("1").username, "otra")
+        self.assertIsNone(repositorio.obtener("15"))

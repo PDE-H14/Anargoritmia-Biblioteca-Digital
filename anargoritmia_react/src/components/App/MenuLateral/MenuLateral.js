@@ -6,8 +6,9 @@ import { BotonTema } from "../../Common";
 import { LOGIN_PATH, RUTAS } from "../../../utils/constants";
 import "./MenuLateral.css";
 
-// Las seis entradas actuales, en el orden del diseño F
+// Las entradas del taller, en el orden del diseño F. «Catálogo» sale a la portada pública.
 const ENTRADAS = [
+  { a: "/#catalogo", texto: "Catálogo", icono: "catalogo", activa: () => false },
   { a: RUTAS.LAB, texto: "Recientes", icono: "recientes", activa: (p) => p === RUTAS.LAB },
   { a: RUTAS.MIS_NOTAS, texto: "Mis notas", icono: "notas", activa: (p) => p === RUTAS.MIS_NOTAS },
   { a: RUTAS.CATEGORIAS, texto: "Categorías", icono: "carpeta", soloStaff: true, activa: (p) => p === RUTAS.CATEGORIAS },

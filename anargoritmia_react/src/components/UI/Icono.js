@@ -36,6 +36,8 @@ const TRAZOS = {
     </>
   ),
   mas: <path d="M12 5v14M5 12h14" />,
+  // Estante con tres lomos: el catálogo público
+  catalogo: <path d="M4 4h3.5v16H4zM9.5 4H13v16H9.5zM15 5.2l3.3-.9 3.2 15.2-3.3.9zM3 20.5h18" />,
   guardar: <path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 4v5h7V4M8 20v-6h8v6" />,
   arriba: <path d="M12 19V5M6 11l6-6 6 6" />,
   abajo: <path d="M12 5v14M6 13l6 6 6-6" />,

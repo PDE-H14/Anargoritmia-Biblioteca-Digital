@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../hooks";
@@ -9,21 +9,23 @@ import {
   Boton,
   Campo,
   Cargando,
-  Casilla,
   Dialogo,
   DialogoConfirmacion,
   EstadoVacio,
   Icono,
-  Tabla,
 } from "../../../components/UI";
+import { SelectorCategorias } from "../../../components/Common";
+import { indiceCategorias } from "../../../utils/categorias";
 import "./Categories.css";
+import { ALTO_IDEAL, ANCHO_IDEAL, EditorPortada } from "./EditorPortada";
+import { IndiceCategorias } from "./IndiceCategorias";
 
 /** Categorías (diseño F, solo administradores). */
 export function Categories() {
   const { auth } = useAuth();
   const [categorias, setCategorias] = useState(null);
   const [error, setError] = useState(null);
-  const [formulario, setFormulario] = useState(null); // { categoria? } abierto
+  const [formulario, setFormulario] = useState(null); // { categoria?, padres? } abierto
   const [porEliminar, setPorEliminar] = useState(null);
 
   const cargar = useCallback(() => {
@@ -35,7 +37,6 @@ export function Categories() {
 
   useEffect(cargar, [cargar]);
 
-  const nombrePorFicha = Object.fromEntries((categorias || []).map((c) => [c.ficha, c.nombre]));
   const hijasDe = (categoria) => (categorias || []).filter((c) => (c.padres || []).includes(categoria.ficha));
 
   const eliminar = async () => {
@@ -52,11 +53,6 @@ export function Categories() {
       <EncabezadoPagina
         titulo="Categorías"
         subtitulo={categorias?.length ? `${categorias.length} ${categorias.length === 1 ? "categoría" : "categorías"}` : null}
-        acciones={
-          <Boton variante="principal" icono="mas" onClick={() => setFormulario({})}>
-            Nueva categoría
-          </Boton>
-        }
       />
 
       <div className="categorias">
@@ -80,63 +76,19 @@ export function Categories() {
             Las categorías ordenan el catálogo público y cada nota necesita una para publicarse.
           </EstadoVacio>
         ) : (
-          <Tabla descripcion="Categorías">
-            <thead>
-              <tr>
-                <th scope="col">Portada</th>
-                <th scope="col">Nombre</th>
-                <th scope="col">Ficha</th>
-                <th scope="col">Descripción</th>
-                <th scope="col">Depende de</th>
-                <th scope="col" className="tabla__acciones">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {categorias.map((c) => (
-                <tr key={c.id_categoria}>
-                  <td>
-                    {c.imagen_portada ? (
-                      <img className="categorias__portada" src={c.imagen_portada} alt="" />
-                    ) : (
-                      <span className="categorias__portada categorias__portada--vacia" aria-label="Sin portada">
-                        <Icono nombre="carpeta" />
-                      </span>
-                    )}
-                  </td>
-                  <td className="categorias__nombre">{c.nombre}</td>
-                  <td className="categorias__ficha">{c.ficha}</td>
-                  <td className="categorias__descripcion">{c.descripcion || <span className="tabla__secundario">—</span>}</td>
-                  <td>
-                    {c.padres?.length ? (
-                      <ul className="categorias__padres">
-                        {c.padres.map((p) => (
-                          <li key={p}>{nombrePorFicha[p] || p}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="tabla__secundario">Raíz</span>
-                    )}
-                  </td>
-                  <td className="tabla__acciones">
-                    <Boton variante="enlace" onClick={() => setFormulario({ categoria: c })} aria-label={`Editar «${c.nombre}»`}>
-                      Editar
-                    </Boton>
-                    <Boton variante="enlace-peligro" onClick={() => setPorEliminar(c)} aria-label={`Eliminar «${c.nombre}»`}>
-                      Eliminar
-                    </Boton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Tabla>
+          <IndiceCategorias
+            categorias={categorias}
+            onEditar={(c) => setFormulario({ categoria: c })}
+            onEliminar={setPorEliminar}
+            onSubcategoria={(c) => setFormulario({ padres: [c.ficha] })}
+          />
         )}
       </div>
 
       {formulario && (
         <FormularioCategoria
           categoria={formulario.categoria}
+          padresIniciales={formulario.padres}
           categorias={categorias || []}
           token={auth.token}
           onCerrar={() => setFormulario(null)}
@@ -146,6 +98,13 @@ export function Categories() {
             cargar();
           }}
         />
+      )}
+
+      {/* Siempre a mano, aunque el índice sea largo */}
+      {categorias?.length > 0 && (
+        <Boton variante="principal" icono="mas" className="categorias__flotante" onClick={() => setFormulario({})}>
+          Nueva categoría
+        </Boton>
       )}
 
       {hijasDelaEliminada.length > 0 ? (
@@ -188,13 +147,14 @@ export function Categories() {
   );
 }
 
-function FormularioCategoria({ categoria, categorias, token, onCerrar, onGuardada }) {
+function FormularioCategoria({ categoria, padresIniciales, categorias, token, onCerrar, onGuardada }) {
   const nueva = !categoria;
   const [valores, setValores] = useState({
     nombre: categoria?.nombre || "",
     descripcion: categoria?.descripcion || "",
-    padres: categoria?.padres || [],
+    padres: categoria?.padres || padresIniciales || [],
     imagen_portada: null, // archivo nuevo; sin él se conserva la portada actual
+    enfoque: { x: categoria?.enfoque_x ?? 50, y: categoria?.enfoque_y ?? 50 },
   });
   const [vistaPrevia, setVistaPrevia] = useState(categoria?.imagen_portada || null);
   const [errores, setErrores] = useState({});
@@ -208,23 +168,22 @@ function FormularioCategoria({ categoria, categorias, token, onCerrar, onGuardad
     [vistaPrevia],
   );
 
-  const posiblesPadres = categorias.filter((c) => c.id_categoria !== categoria?.id_categoria);
-
-  const alternarPadre = (ficha, marcado) =>
-    setValores((v) => ({
-      ...v,
-      padres: marcado ? [...v.padres, ficha] : v.padres.filter((p) => p !== ficha),
-    }));
+  // Ni ella misma ni sus descendientes pueden ser su padre (sería un ciclo)
+  const prohibidos = useMemo(() => {
+    if (!categoria) return new Set();
+    return new Set([categoria.ficha, ...indiceCategorias(categorias).descendientes(categoria.ficha)]);
+  }, [categoria, categorias]);
 
   const elegirImagen = (e) => {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    if (!["image/jpeg", "image/png"].includes(archivo.type)) {
-      setErrores((x) => ({ ...x, imagen_portada: "La portada debe ser una imagen JPG o PNG." }));
+    if (!["image/jpeg", "image/png", "image/webp"].includes(archivo.type)) {
+      setErrores((x) => ({ ...x, imagen_portada: "La portada debe ser una imagen JPG, PNG o WebP." }));
       return;
     }
     setErrores((x) => ({ ...x, imagen_portada: undefined }));
-    setValores((v) => ({ ...v, imagen_portada: archivo }));
+    // Imagen nueva: el enfoque vuelve al centro
+    setValores((v) => ({ ...v, imagen_portada: archivo, enfoque: { x: 50, y: 50 } }));
     setVistaPrevia(URL.createObjectURL(archivo));
   };
 
@@ -283,34 +242,34 @@ function FormularioCategoria({ categoria, categorias, token, onCerrar, onGuardad
           />
         </Campo>
 
-        <fieldset className="categorias__dependencias">
-          <legend className="campo__etiqueta">Depende de</legend>
-          {posiblesPadres.length === 0 ? (
-            <p className="campo__ayuda">No hay otras categorías todavía; esta será raíz.</p>
-          ) : (
-            <div className="categorias__casillas">
-              {posiblesPadres.map((c) => (
-                <Casilla
-                  key={c.id_categoria}
-                  id={`padre-${c.id_categoria}`}
-                  etiqueta={c.nombre}
-                  checked={valores.padres.includes(c.ficha)}
-                  onChange={(marcado) => alternarPadre(c.ficha, marcado)}
-                />
-              ))}
-            </div>
-          )}
-          <p className="campo__ayuda">Sin marcar ninguna, la categoría es raíz del catálogo.</p>
-        </fieldset>
+        {categorias.length - prohibidos.size > 0 ? (
+          <SelectorCategorias
+            id="categoria-padres"
+            etiqueta="Depende de"
+            categorias={categorias}
+            clave="ficha"
+            valor={valores.padres}
+            multiple
+            excluir={prohibidos}
+            ayuda="Sin elegir ninguna, la categoría es raíz del catálogo. Puede depender de varias: aparece bajo cada una."
+            onCambiar={(padres) => setValores((v) => ({ ...v, padres }))}
+          />
+        ) : (
+          <p className="campo__ayuda">No hay otras categorías todavía; esta será raíz.</p>
+        )}
 
         <div className="campo">
           <span className="campo__etiqueta" id="categoria-portada-etiqueta">
             Portada
           </span>
+          <p className="campo__ayuda categorias__medidas">
+            Ideal: <strong>{ANCHO_IDEAL} × {ALTO_IDEAL} px</strong>, horizontal (16:9); mínimo 1200 px de ancho. En
+            pantallas anchas se ve como <strong>banda 4:1</strong> (una franja de 1600 × 400 px) y en pantallas
+            medianas y en móvil como <strong>ficha 4:3</strong> (1200 × 900 px). No se deforma: se recorta alrededor del
+            punto de enfoque que elijas. Se guarda como WebP de máximo 1600 px.
+          </p>
           <div className="categorias__selector">
-            {vistaPrevia ? (
-              <img className="categorias__vista" src={vistaPrevia} alt="Vista previa de la portada" />
-            ) : (
+            {!vistaPrevia && (
               <span className="categorias__vista categorias__portada--vacia">
                 <Icono nombre="carpeta" tamano={28} />
               </span>
@@ -323,16 +282,23 @@ function FormularioCategoria({ categoria, categorias, token, onCerrar, onGuardad
                 id="categoria-portada"
                 className="solo-lectores"
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/png,image/webp"
                 aria-labelledby="categoria-portada-etiqueta"
                 onChange={elegirImagen}
               />
               <p className="campo__ayuda">
-                {valores.imagen_portada ? valores.imagen_portada.name : "JPG o PNG."}
+                {valores.imagen_portada ? valores.imagen_portada.name : "JPG, PNG o WebP."}
                 {!nueva && !valores.imagen_portada && " Si no eliges otra, se conserva la actual."}
               </p>
             </div>
           </div>
+          {vistaPrevia && (
+            <EditorPortada
+              src={vistaPrevia}
+              enfoque={valores.enfoque}
+              onCambiar={(enfoque) => setValores((v) => ({ ...v, enfoque }))}
+            />
+          )}
           {errores.imagen_portada && (
             <p className="campo__error">
               <Icono nombre="error" tamano={16} />

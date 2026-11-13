@@ -5,7 +5,9 @@ import { getCategoriesApi } from "../../../api/category";
 import { getPublicNotesApi } from "../../../api/note";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
 import { RUTAS, leerNota } from "../../../utils/constants";
+import { indiceCategorias, nombreConRuta } from "../../../utils/categorias";
 import { firmaAutor, tiposDeCeldas } from "../../../utils/notas";
+import { useNotaSugerencias } from "../../../utils/sugerencias";
 import "./Portada.css";
 
 const PRINCIPIOS = [
@@ -27,9 +29,45 @@ const PRINCIPIOS = [
   },
 ];
 
-function metaNota(nota) {
-  const firma = firmaAutor(nota.autor);
-  return `${tiposDeCeldas(nota.celdas)} · ${firma ? `por ${firma}` : "autoría comunitaria"}`;
+
+// Una nota aparece en su categoría principal y en las extra
+const categoriasDe = (nota) => [nota.id_categoria, ...(nota.categorias_extra || [])];
+
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * Cabecera de la categoría elegida (o de «Todas»). Según el ancho de la
+ * columna (Portada.css):
+ * - ancha: banda con la portada a todo lo ancho, línea roja y, debajo, nombre,
+ *   conteo y descripción;
+ * - media: ficha 4:3 con el bloque rojo desplazado y el texto al lado;
+ * - angosta: la ficha con la imagen arriba.
+ * Sin imagen (o si no carga) queda solo el texto.
+ */
+function CabeceraCategoria({ nombre, descripcion, imagen, enfoque, meta }) {
+  const [fallo, setFallo] = useState(false);
+  const sinImagen = !imagen || fallo;
+  return (
+    <header className={`ficha-categoria${sinImagen ? " ficha-categoria--sin-imagen" : ""}`}>
+      {!sinImagen && (
+        <div className="ficha-categoria__imagen">
+          {/* Decorativa: el nombre de la categoría está al lado */}
+          <img
+            src={imagen}
+            alt=""
+            onError={() => setFallo(true)}
+            // Los dos recortes (banda y ficha) se hacen alrededor del punto de enfoque
+            style={{ objectPosition: `${enfoque.x}% ${enfoque.y}%` }}
+          />
+        </div>
+      )}
+      <div className="ficha-categoria__texto">
+        <p className="ficha-categoria__meta">{meta}</p>
+        <h3 className="ficha-categoria__nombre">{nombre}</h3>
+        {descripcion && <p className="ficha-categoria__descripcion">{descripcion}</p>}
+      </div>
+    </header>
+  );
 }
 
 /** Portada pública (diseño F). */
@@ -44,12 +82,13 @@ export function Portada() {
   const [texto, setTexto] = useState(consulta);
   const [resultados, setResultados] = useState(null);
   const [buscando, setBuscando] = useState(false);
+  const notaSugerencias = useNotaSugerencias();
 
   const cargar = useCallback(() => {
     setError(null);
     Promise.all([getCategoriesApi(), getPublicNotesApi()])
       .then(([cats, publicadas]) => {
-        setCategorias([...(cats || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
+        setCategorias(cats || []);
         setNotas(publicadas || []);
       })
       .catch((e) => setError(e.message));
@@ -61,8 +100,28 @@ export function Portada() {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
   }, [hash, notas]);
 
-  const fichaElegida = parametros.get("categoria");
-  const elegida = categorias?.find((c) => c.ficha === fichaElegida) || null;
+  // Un enlace con ?q= (p. ej. una etiqueta en la lectura) llena el buscador
+  useEffect(() => {
+    setTexto((actual) => (actual.trim() === consulta ? actual : consulta));
+  }, [consulta]);
+
+  const indice = useMemo(() => indiceCategorias(categorias), [categorias]);
+  const elegida = indice.porFicha.get(parametros.get("categoria")) || null;
+  const migas = elegida ? indice.ruta(elegida) : [];
+
+  // Identificadores que abarca una categoría: ella y todas sus descendientes
+  const abarca = useCallback(
+    (c) => new Set([c.id_categoria, ...[...indice.descendientes(c.ficha)].map((f) => indice.porFicha.get(f).id_categoria)]),
+    [indice]
+  );
+  const notasPorFicha = useMemo(() => {
+    const cuenta = new Map();
+    indice.lista.forEach((c) => {
+      const ids = abarca(c);
+      cuenta.set(c.ficha, (notas || []).filter((n) => categoriasDe(n).some((id) => ids.has(id))).length);
+    });
+    return cuenta;
+  }, [indice, notas, abarca]);
 
   const cambiarParametro = useCallback(
     (nombre, valor) => {
@@ -104,10 +163,35 @@ export function Portada() {
   const notasVisibles = useMemo(() => {
     const base = consulta ? resultados : notas;
     if (!base) return [];
-    return elegida ? base.filter((n) => n.id_categoria === elegida.id_categoria) : base;
-  }, [notas, resultados, consulta, elegida]);
+    if (!elegida) return base;
+    const ids = abarca(elegida);
+    return base.filter((n) => categoriasDe(n).some((id) => ids.has(id)));
+  }, [notas, resultados, consulta, elegida, abarca]);
 
-  const elegir = (ficha) => cambiarParametro("categoria", ficha);
+  const hijas = elegida ? indice.hijasDe(elegida.ficha) : indice.raices;
+
+  const elegir = (ficha, { subir = false } = {}) => {
+    cambiarParametro("categoria", ficha);
+    // Desde la cuadrícula o las migas: si el catálogo quedó arriba, vuelve a su inicio
+    const catalogo = document.getElementById("catalogo");
+    if (subir && catalogo && catalogo.getBoundingClientRect().top < 0) catalogo.scrollIntoView({ block: "start" });
+  };
+
+  const metaNota = (nota) => {
+    const firma = firmaAutor(nota.autor);
+    const lugar = nombreConRuta(indice, indice.porId.get(nota.id_categoria));
+    return [lugar, tiposDeCeldas(nota.celdas), firma ? `por ${firma}` : "autoría comunitaria"].filter(Boolean).join(" · ");
+  };
+
+  const conteo = (c) => {
+    const subcategorias = indice.hijasDe(c.ficha).length;
+    return [
+      subcategorias > 0 && plural(subcategorias, "subcategoría", "subcategorías"),
+      plural(notasPorFicha.get(c.ficha) || 0, "nota", "notas"),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  };
 
   return (
     <div className="portada">
@@ -168,6 +252,7 @@ export function Portada() {
           <Cargando texto="Cargando catálogo…" />
         ) : (
           <div className="catalogo">
+            {/* Solo las raíces; las subcategorías se recorren en la columna principal */}
             <nav className="catalogo__categorias" aria-label="Categorías">
               <ul>
                 <li>
@@ -178,9 +263,9 @@ export function Portada() {
                     </span>
                   </button>
                 </li>
-                {categorias.map((c) => (
+                {indice.raices.map((c) => (
                   <li key={c.id_categoria}>
-                    <button type="button" aria-pressed={elegida?.id_categoria === c.id_categoria} onClick={() => elegir(c.ficha)}>
+                    <button type="button" aria-pressed={migas[0]?.id_categoria === c.id_categoria} onClick={() => elegir(c.ficha)}>
                       {c.nombre}
                       <span className="catalogo__flecha" aria-hidden="true">
                         →
@@ -192,53 +277,135 @@ export function Portada() {
             </nav>
 
             <div className="catalogo__notas">
-              <form className="catalogo__buscador" role="search" onSubmit={(e) => e.preventDefault()}>
-                <label htmlFor="catalogo-busqueda" className="solo-lectores">
-                  Buscar en el catálogo
-                </label>
-                <input
-                  id="catalogo-busqueda"
-                  type="search"
-                  className="campo__control"
-                  placeholder="Buscar por título, tema, etiqueta o autor"
-                  value={texto}
-                  maxLength={100}
-                  onChange={(e) => setTexto(e.target.value)}
+              <nav className="catalogo__migas" aria-label="Ubicación en el catálogo">
+                <ol>
+                  <li>
+                    {elegida ? (
+                      <button type="button" onClick={() => elegir(null, { subir: true })}>
+                        Todas
+                      </button>
+                    ) : (
+                      <span aria-current="page">Todas</span>
+                    )}
+                  </li>
+                  {migas.map((c, i) =>
+                    i < migas.length - 1 ? (
+                      <li key={c.id_categoria}>
+                        <button type="button" onClick={() => elegir(c.ficha, { subir: true })}>
+                          {c.nombre}
+                        </button>
+                      </li>
+                    ) : (
+                      <li key={c.id_categoria}>
+                        <span aria-current="page">{c.nombre}</span>
+                      </li>
+                    )
+                  )}
+                </ol>
+              </nav>
+
+              {elegida ? (
+                <CabeceraCategoria
+                  key={elegida.id_categoria}
+                  nombre={elegida.nombre}
+                  descripcion={elegida.descripcion}
+                  imagen={elegida.imagen_portada}
+                  enfoque={{ x: elegida.enfoque_x ?? 50, y: elegida.enfoque_y ?? 50 }}
+                  meta={conteo(elegida)}
                 />
-                {texto && (
-                  <button type="button" className="catalogo__limpiar" onClick={() => setTexto("")}>
-                    Limpiar
-                  </button>
-                )}
+              ) : (
+                <CabeceraCategoria
+                  nombre="Todas"
+                  meta={`${plural(indice.raices.length, "categoría", "categorías")} · ${plural(notas.length, "nota", "notas")}`}
+                />
+              )}
+
+              <form className="catalogo__buscador" role="search" onSubmit={(e) => e.preventDefault()}>
+                <label htmlFor="catalogo-busqueda" className="catalogo__etiqueta">
+                  Buscar en {elegida ? elegida.nombre : "todo el catálogo"}
+                </label>
+                <div className="catalogo__campo">
+                  <input
+                    id="catalogo-busqueda"
+                    type="search"
+                    className="campo__control"
+                    placeholder="Buscar por título, tema, etiqueta o autor"
+                    value={texto}
+                    maxLength={100}
+                    onChange={(e) => setTexto(e.target.value)}
+                  />
+                  {texto && (
+                    <button type="button" className="catalogo__limpiar" onClick={() => setTexto("")}>
+                      Limpiar
+                    </button>
+                  )}
+                </div>
               </form>
               <p className="catalogo__resumen" aria-live="polite">
                 {consulta &&
                   (buscando
                     ? "Buscando…"
-                    : `${notasVisibles.length} ${notasVisibles.length === 1 ? "nota coincide" : "notas coinciden"} con «${consulta}»${elegida ? ` en «${elegida.nombre}»` : ""}.`)}
+                    : `${plural(notasVisibles.length, "nota coincide", "notas coinciden")} con «${consulta}»${elegida ? ` en «${elegida.nombre}»` : ""}.`)}
               </p>
-              {elegida?.descripcion && <p className="catalogo__descripcion">{elegida.descripcion}</p>}
-              {consulta && !buscando && notasVisibles.length === 0 ? (
-                <p className="catalogo__vacio">
-                  Ninguna nota publicada coincide. Prueba con menos palabras o con otra categoría.
-                </p>
-              ) : consulta && buscando ? null : notasVisibles.length === 0 ? (
-                <p className="catalogo__vacio">
-                  {elegida ? `Aún no hay notas publicadas en «${elegida.nombre}».` : "Aún no hay notas publicadas."}{" "}
-                  <Link to={RUTAS.CREAR}>Escribe la primera en el taller</Link>.
-                </p>
-              ) : (
-                <ul>
-                  {notasVisibles.map((n) => (
-                    <li key={n.id_documento}>
-                      <Link to={leerNota(n.id_documento)} className="catalogo__titulo">
-                        {n.titulo}
-                      </Link>
-                      <span className="catalogo__meta">{metaNota(n)}</span>
-                    </li>
-                  ))}
-                </ul>
+
+              {!consulta && hijas.length > 0 && (
+                <section className="catalogo__apartado" aria-labelledby="catalogo-subcategorias">
+                  <h4 id="catalogo-subcategorias" className="catalogo__subtitulo">
+                    {elegida ? "Subcategorías" : "Categorías"}
+                  </h4>
+                  <ol className="catalogo__rejilla">
+                    {hijas.map((c, i) => (
+                      <li key={c.id_categoria}>
+                        <button type="button" className="catalogo__subcategoria" onClick={() => elegir(c.ficha, { subir: true })}>
+                          <span
+                            className={`catalogo__numero${notasPorFicha.get(c.ficha) ? " catalogo__numero--con-notas" : ""}`}
+                            aria-hidden="true"
+                          >
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          <span className="catalogo__subnombre">{c.nombre}</span>
+                          <span className="catalogo__subconteo">{conteo(c)}</span>
+                          <span className="catalogo__subflecha" aria-hidden="true">
+                            →
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ol>
+                  {notaSugerencias && (
+                    <p className="catalogo__sugerir">
+                      ¿Falta una categoría? <Link to={leerNota(notaSugerencias)}>Sugiérela</Link>.
+                    </p>
+                  )}
+                </section>
               )}
+
+              <section className="catalogo__apartado" aria-labelledby="catalogo-lista">
+                <h4 id="catalogo-lista" className="catalogo__subtitulo">
+                  {consulta ? "Resultados" : elegida ? `Notas en ${elegida.nombre}` : "Todas las notas"}
+                </h4>
+                {consulta && !buscando && notasVisibles.length === 0 ? (
+                  <p className="catalogo__vacio">
+                    Ninguna nota publicada coincide. Prueba con menos palabras o con otra categoría.
+                  </p>
+                ) : consulta && buscando ? null : notasVisibles.length === 0 ? (
+                  <p className="catalogo__vacio">
+                    {elegida ? `Aún no hay notas publicadas en «${elegida.nombre}».` : "Aún no hay notas publicadas."}{" "}
+                    <Link to={RUTAS.CREAR}>Escribe la primera en el taller</Link>.
+                  </p>
+                ) : (
+                  <ul className="catalogo__lista">
+                    {notasVisibles.map((n) => (
+                      <li key={n.id_documento}>
+                        <Link to={leerNota(n.id_documento)} className="catalogo__titulo">
+                          {n.titulo}
+                        </Link>
+                        <span className="catalogo__meta">{metaNota(n)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             </div>
           </div>
         )}

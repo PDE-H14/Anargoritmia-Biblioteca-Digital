@@ -1,8 +1,124 @@
 .categorias {
   padding: 32px 40px 60px;
 }
-.categorias .tabla__t {
-  min-width: 900px;
+
+/* ---- Índice de categorías (IndiceCategorias.js) ---- */
+.indice-categorias {
+  max-width: 1100px;
+  padding-bottom: 72px; /* que el botón flotante no tape la última fila */
+}
+.indice-categorias__barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.indice-categorias__barra input {
+  flex: 1 1 16rem;
+  width: auto;
+}
+.indice-categorias ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.indice-categorias__lista {
+  border-top: 3px solid var(--fg);
+  border-bottom: 3px solid var(--fg);
+}
+.indice-categorias__lista > li + li {
+  border-top: 1px solid var(--fg);
+}
+.indice-categorias__rama {
+  margin-left: 22px !important;
+  padding-left: 18px !important;
+  border-left: 2px solid var(--line-strong);
+}
+.indice-categorias__rama > li {
+  border-top: 1px solid var(--line);
+}
+.indice-categorias__fila {
+  display: grid;
+  grid-template-columns: 36px 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+}
+.indice-categorias__desplegar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio);
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+button.indice-categorias__desplegar:hover {
+  background: var(--sur);
+}
+button.indice-categorias__desplegar:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+.indice-categorias__desplegar svg {
+  transform: rotate(-90deg);
+  transition: transform 0.12s;
+}
+.indice-categorias__desplegar[aria-expanded="true"] svg {
+  transform: none;
+}
+.indice-categorias__desplegar:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.indice-categorias__datos p {
+  margin: 0 !important;
+}
+.indice-categorias__nombre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.indice-categorias__cuenta,
+.indice-categorias__ficha {
+  font: 400 0.85rem var(--f-mono);
+  color: var(--mut);
+}
+.indice-categorias__cuenta {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.indice-categorias__descripcion {
+  margin-top: 4px !important;
+  color: var(--soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.indice-categorias__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 12px;
+}
+.indice-categorias__sin {
+  color: var(--soft);
+}
+
+/* Botón «Nueva categoría» fijo en la esquina */
+.categorias__flotante {
+  position: fixed;
+  right: 32px;
+  bottom: 32px;
+  z-index: 20;
+  box-shadow: var(--sombra);
 }
 
 .categorias__portada {
@@ -82,6 +198,138 @@
 label.boton {
   cursor: pointer;
 }
+.categorias__medidas {
+  margin: 0 0 10px !important;
+}
+
+/* ---- Portada: punto de enfoque y vistas previas (EditorPortada.js) ---- */
+.editor-portada {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 14px;
+}
+.editor-portada__instruccion {
+  margin: 0 0 8px !important;
+  color: var(--soft);
+  font-size: 0.9rem;
+}
+.editor-portada__marco {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 0;
+  cursor: crosshair;
+  touch-action: none; /* arrastrar en pantallas táctiles no desplaza la página */
+  user-select: none;
+  border-radius: 4px;
+}
+.editor-portada__marco:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+.editor-portada__marco img {
+  display: block;
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+}
+/* Lo que se ve en cada recorte, sobre la imagen original */
+.editor-portada__region {
+  position: absolute;
+  pointer-events: none;
+  line-height: 1.2;
+}
+.editor-portada__region span {
+  position: absolute;
+  padding: 1px 6px;
+  font: 700 0.75rem var(--f-ui);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+}
+.editor-portada__region--banda {
+  border: 2px solid var(--brand);
+}
+.editor-portada__region--banda span {
+  top: 0;
+  left: 0;
+}
+.editor-portada__region--ficha {
+  border: 2px dashed #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.editor-portada__region--ficha span {
+  right: 0;
+  bottom: 0;
+}
+.editor-portada__punto {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.75), inset 0 0 0 2px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+}
+.editor-portada__datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 8px;
+  color: var(--soft);
+  font: 400 0.85rem var(--f-mono);
+}
+.editor-portada__aviso {
+  margin: 8px 0 0 !important;
+  padding: 6px 10px;
+  border-left: 4px solid var(--acc);
+  background: var(--sur);
+  font-size: 0.9rem;
+}
+.editor-portada__previas {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.editor-portada__previas figure {
+  margin: 0;
+}
+.editor-portada__previas figcaption {
+  margin-top: 6px;
+  color: var(--mut);
+  font: 400 0.8rem var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.editor-portada__previas img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Mismas proporciones y acentos que el catálogo */
+.editor-portada__banda {
+  aspect-ratio: 4 / 1;
+  border-bottom: 5px solid var(--brand);
+  overflow: hidden;
+}
+.editor-portada__ficha {
+  position: relative;
+  width: 62%;
+  aspect-ratio: 4 / 3;
+  margin: 0 8px 8px 0;
+}
+.editor-portada__ficha::before {
+  content: "";
+  position: absolute;
+  inset: 8px -8px -8px 8px;
+  background: var(--brand);
+}
+.editor-portada__ficha img {
+  position: relative;
+}
 .categorias__selector:focus-within label.boton {
   box-shadow: var(--foco);
 }
@@ -89,5 +337,27 @@ label.boton {
 @media (max-width: 760px) {
   .categorias {
     padding: 20px 16px 40px;
+  }
+  .indice-categorias__fila {
+    grid-template-columns: 36px 56px minmax(0, 1fr);
+  }
+  .indice-categorias__fila .categorias__portada {
+    width: 56px;
+    height: 40px;
+  }
+  .indice-categorias__acciones {
+    grid-column: 3;
+    justify-content: flex-start;
+  }
+  .indice-categorias__rama {
+    margin-left: 10px !important;
+    padding-left: 10px !important;
+  }
+  .categorias__flotante {
+    right: 16px;
+    bottom: 16px;
+  }
+  .editor-portada {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

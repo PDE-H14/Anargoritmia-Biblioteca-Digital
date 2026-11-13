@@ -135,10 +135,11 @@
   align-items: start;
   gap: 32px 56px;
 }
-.catalogo ul {
+.catalogo ul,
+.catalogo ol {
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
 }
 
 .catalogo__categorias ul {
@@ -177,17 +178,128 @@
   visibility: visible;
 }
 
-.catalogo__notas > ul {
+.catalogo__lista {
   border-top: 3px solid var(--fg);
-  border-bottom: 3px solid var(--fg);
 }
-.catalogo__notas li {
+.catalogo__lista li {
   display: grid;
   gap: 6px;
   padding: 22px 0;
+  border-bottom: 1px solid var(--line-strong);
 }
-.catalogo__notas li + li {
-  border-top: 1px solid var(--fg);
+
+/* ---- Migas: Todas / Comunidad / Guías ---- */
+.catalogo__migas ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+  font: 700 0.9rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.catalogo__migas li + li::before {
+  content: "/";
+  margin: 0 10px;
+  color: var(--mut);
+}
+.catalogo__migas button {
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--soft);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.catalogo__migas button:hover {
+  color: var(--fg);
+}
+.catalogo__migas button:focus-visible,
+.catalogo__subcategoria:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+
+/* ---- Apartados: subcategorías y notas ---- */
+.catalogo__apartado + .catalogo__apartado {
+  margin-top: 40px;
+}
+.catalogo__subtitulo {
+  margin: 0 0 14px !important;
+  font: 700 0.95rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.catalogo__rejilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 48px;
+  border-top: 3px solid var(--fg);
+}
+.catalogo__rejilla li {
+  border-bottom: 1px solid var(--line-strong);
+}
+.catalogo__subcategoria {
+  display: grid;
+  grid-template-columns: 2.4em minmax(0, 1fr) auto;
+  grid-template-areas:
+    "numero nombre flecha"
+    ". conteo .";
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 20px 0 22px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+}
+.catalogo__subcategoria:hover .catalogo__subnombre {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.catalogo__numero {
+  grid-area: numero;
+  font: 400 1rem var(--f-mono);
+  color: var(--mut);
+}
+.catalogo__numero--con-notas {
+  color: var(--acc);
+}
+.catalogo__subnombre {
+  grid-area: nombre;
+  font: 400 clamp(1.4rem, 2.2vw, 1.9rem) / 1.05 var(--f-cartel);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.catalogo__subconteo {
+  grid-area: conteo;
+  font: 400 0.85rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mut);
+}
+.catalogo__subflecha {
+  grid-area: flecha;
+  font-size: 1.4rem;
+}
+.catalogo__sugerir {
+  margin: 14px 0 0 !important;
+  color: var(--soft);
+}
+.catalogo__sugerir a {
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .catalogo__titulo {
   color: var(--fg);
@@ -203,12 +315,113 @@
   letter-spacing: 0.1em;
   color: var(--mut);
 }
-.catalogo__descripcion {
-  margin: 0 0 16px !important;
+
+/* ---- Cabecera de la categoría elegida: portada 4:3 y su texto ---- */
+.ficha-categoria {
+  display: grid;
+  grid-template-columns: minmax(0, 23rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 36px;
+  margin-bottom: 36px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.ficha-categoria--sin-imagen {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* El bloque rojo asoma abajo y a la derecha de la imagen */
+.ficha-categoria__imagen {
+  position: relative;
+  margin: 0 12px 12px 0;
+}
+.ficha-categoria__imagen::before {
+  content: "";
+  position: absolute;
+  inset: 12px -12px -12px 12px;
+  background: var(--brand);
+}
+.ficha-categoria__imagen img {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--sur);
+}
+.ficha-categoria__meta {
+  margin: 0 0 8px !important;
+  font: 400 0.95rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mut);
+}
+.ficha-categoria__nombre {
+  margin: 0 0 12px !important;
+  font: 400 clamp(2.2rem, 4vw, 3.6rem) / 1 var(--f-cartel);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.ficha-categoria__descripcion {
+  margin: 0 !important;
   color: var(--soft);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
+  line-height: 1.45;
+}
+
+/*
+ * Columna ancha: la ficha se vuelve banda (propuesta 1). Se decide por el ancho de la columna de notas, no de la ventana,
+ * porque la lista de categorías ocupa una parte variable.
+ */
+.catalogo__notas {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+@container (min-width: 600px) {
+  .catalogo__rejilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (min-width: 760px) {
+  .ficha-categoria {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+    margin-bottom: 32px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+  .ficha-categoria__imagen {
+    margin: 0;
+  }
+  .ficha-categoria__imagen::before {
+    display: none;
+  }
+  .ficha-categoria__imagen img {
+    aspect-ratio: 4 / 1;
+    border-bottom: 8px solid var(--brand);
+  }
+  /* Nombre a la izquierda, número de notas a la derecha y la descripción debajo */
+  .ficha-categoria__texto {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 24px;
+  }
+  .ficha-categoria__meta {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0 !important;
+  }
+  .ficha-categoria__nombre {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .ficha-categoria__descripcion {
+    grid-column: 1 / -1;
+  }
 }
 .catalogo__vacio {
+  margin: 0 !important;
   padding: 24px 0;
   border-top: 3px solid var(--fg);
   border-bottom: 3px solid var(--fg);
@@ -224,8 +437,19 @@
 
 /* ---- Buscador del catálogo ---- */
 .catalogo__buscador {
-  position: relative;
   margin-bottom: 8px;
+}
+/* Campo y botón «Limpiar» superpuesto, sin contar la etiqueta */
+.catalogo__campo {
+  position: relative;
+}
+.catalogo__etiqueta {
+  display: block;
+  margin-bottom: 10px;
+  font: 400 0.9rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mut);
 }
 .catalogo__buscador input {
   padding-right: 92px;
@@ -270,6 +494,18 @@
   }
   .catalogo {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* Una columna: la cuadrícula de categorías y las migas sustituyen a la lista lateral */
+  .catalogo__categorias {
+    display: none;
+  }
+}
+
+/* Columna angosta: la imagen sobre el texto */
+@container (max-width: 520px) {
+  .ficha-categoria {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
   }
 }
 

@@ -1,31 +1,33 @@
-import os
 import uuid
-from urllib.parse import urlparse
+from django.http import Http404, HttpResponse, HttpResponseNotModified
+from django.views.decorators.http import require_safe
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
-from django.core.files.storage import FileSystemStorage
 from pymongo.errors import DuplicateKeyError
 from db import db
 
+from categorias import imagenes
+from categorias.imagenes import ImagenInvalida, borrar_imagen, guardar_imagen
 from .serializers import CategoriaSerializer
 
 
-def guardar_imagen(archivo):
-    """Guarda el archivo con nombre aleatorio y devuelve su ruta relativa (/uploads/...)."""
-    fs = FileSystemStorage()
-    extension = os.path.splitext(archivo.name)[1].lower()
-    nombre_archivo = fs.save(f"{uuid.uuid4().hex}{extension}", archivo)
-    return fs.url(nombre_archivo)
-
-
-def borrar_imagen(url):
-    """Elimina del disco la imagen referida por una URL absoluta o relativa."""
-    if not url:
-        return
-    nombre_archivo = os.path.basename(urlparse(url).path)
-    fs = FileSystemStorage()
-    if nombre_archivo and fs.exists(nombre_archivo):
-        fs.delete(nombre_archivo)
+@require_safe
+def servir_imagen(request, id_imagen):
+    """
+    GET /api/imagenes/<id>.webp — portada guardada en MongoDB (categorias/imagenes.py).
+    Pública y con caché de un año: cada imagen nueva recibe otro id.
+    """
+    documento = imagenes.obtener(id_imagen)
+    if documento is None:
+        raise Http404("No existe esa imagen.")
+    etiqueta = f'"{id_imagen}"'
+    if request.headers.get("If-None-Match") == etiqueta:
+        return HttpResponseNotModified()
+    respuesta = HttpResponse(bytes(documento["contenido"]), content_type=documento["tipo"])
+    respuesta["Cache-Control"] = "public, max-age=31536000, immutable"
+    respuesta["ETag"] = etiqueta
+    respuesta["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return respuesta
 
 
 def error(mensaje, codigo=status.HTTP_400_BAD_REQUEST):
@@ -136,7 +138,12 @@ class CategoriaViewSet(viewsets.GenericViewSet):
             return error(mensaje)
 
         archivo = datos.pop("imagen_portada", None)
-        datos["imagen_portada"] = guardar_imagen(archivo) if archivo else None
+        datos.setdefault("enfoque_x", 50)
+        datos.setdefault("enfoque_y", 50)
+        try:
+            datos["imagen_portada"] = guardar_imagen(archivo) if archivo else None
+        except ImagenInvalida as e:
+            return error(str(e))
         datos.setdefault("descripcion", "")
         datos["id_categoria"] = str(uuid.uuid4())
 
@@ -189,7 +196,13 @@ class CategoriaViewSet(viewsets.GenericViewSet):
         archivo = cambios.pop("imagen_portada", None)
         imagen_anterior = categoria.get("imagen_portada")
         if archivo:
-            cambios["imagen_portada"] = guardar_imagen(archivo)
+            # Una imagen nueva sin enfoque elegido se recorta por el centro
+            cambios.setdefault("enfoque_x", 50)
+            cambios.setdefault("enfoque_y", 50)
+            try:
+                cambios["imagen_portada"] = guardar_imagen(archivo)
+            except ImagenInvalida as e:
+                return error(str(e))
 
         try:
             if cambios:
@@ -213,7 +226,7 @@ class CategoriaViewSet(viewsets.GenericViewSet):
         if not categoria:
             return error("La categoría solicitada no existe.", status.HTTP_404_NOT_FOUND)
 
-        if db["Nota"].find_one({"id_categoria": id_categoria}):
+        if db["Nota"].find_one({"$or": [{"id_categoria": id_categoria}, {"categorias_extra": id_categoria}]}):
             return error("No se puede eliminar una categoría con notas asociadas.")
 
         if self.coleccion.find_one({"padres": categoria["ficha"]}):

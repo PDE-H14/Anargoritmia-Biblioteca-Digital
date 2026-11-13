@@ -5,6 +5,10 @@ from db import db
 
 TIPOS_BLOQUE = ("texto", "codigo", "animacion", "ejercicio")
 MAX_PRERREQUISITOS = 5
+# Además de la principal, una nota puede aparecer en hasta tres categorías más
+MAX_CATEGORIAS_EXTRA = 3
+MAX_ETIQUETAS = 10
+MAX_CARACTERES_ETIQUETA = 40
 MAX_BLOQUES = 300
 MAX_CARACTERES_BLOQUE = 100_000
 # Nombre de archivo de una celda: letras, números, punto, guion y guion bajo
@@ -96,6 +100,7 @@ class NotaResumenSerializer(serializers.Serializer):
     titulo = serializers.CharField()
     ficha = serializers.CharField()
     id_categoria = serializers.CharField()
+    categorias_extra = serializers.ListField(child=serializers.CharField(), default=list)
     autor = AutorSerializer()
     etiquetas = serializers.ListField(child=serializers.CharField(), default=list)
     es_borrador = serializers.BooleanField()
@@ -120,6 +125,8 @@ class NotaSerializer(serializers.Serializer):
     fecha_modificacion = serializers.DateTimeField(read_only=True)
     celdas = ResumenCeldasSerializer(read_only=True)
     categoria = serializers.DictField(read_only=True, required=False)
+    # Nombre y ficha de las categorías extra, para la lectura
+    otras_categorias = serializers.ListField(child=serializers.DictField(), read_only=True, required=False)
     # Nota de la que se derivó esta (CC BY-SA obliga a atribuirla)
     origen = serializers.DictField(read_only=True, required=False, allow_null=True)
     # Ruta de estudio resuelta para la lectura: prerrequisitos y notas que siguen
@@ -131,12 +138,21 @@ class NotaSerializer(serializers.Serializer):
     # Título y categoría pueden quedar vacíos mientras la nota sea borrador
     titulo = serializers.CharField(max_length=255, allow_blank=True, required=False, default="")
     id_categoria = serializers.CharField(max_length=255, allow_blank=True, required=False, default="")
-    licencia = serializers.CharField(max_length=100, default="CC BY-SA 4.0")
-    etiquetas = serializers.ListField(
-        child=serializers.CharField(max_length=100),
+    # Otras categorías en las que también aparece (identificadores, sin la principal)
+    categorias_extra = serializers.ListField(
+        child=serializers.CharField(max_length=255),
         allow_empty=True,
         required=False,
-        default=list
+        default=list,
+        max_length=MAX_CATEGORIAS_EXTRA,
+    )
+    licencia = serializers.CharField(max_length=100, default="CC BY-SA 4.0")
+    etiquetas = serializers.ListField(
+        child=serializers.CharField(max_length=MAX_CARACTERES_ETIQUETA, allow_blank=True),
+        allow_empty=True,
+        required=False,
+        default=list,
+        max_length=MAX_ETIQUETAS,
     )
     bloques = serializers.ListField(
         child=BloqueSerializer(),
@@ -159,7 +175,8 @@ class NotaSerializer(serializers.Serializer):
         datos = super().to_representation(instancia)
         datos["revision"] = instancia.get("revision", 0)
         datos["prerrequisitos"] = instancia.get("prerrequisitos", [])
-        for opcional in ("categoria", "origen", "ruta"):
+        datos["categorias_extra"] = instancia.get("categorias_extra", [])
+        for opcional in ("categoria", "otras_categorias", "origen", "ruta"):
             if opcional not in instancia:
                 datos.pop(opcional, None)
         return datos
@@ -192,6 +209,28 @@ class NotaSerializer(serializers.Serializer):
             raise serializers.ValidationError("La categoría especificada no existe.")
         return value
 
+    def validate_etiquetas(self, value):
+        """Sin espacios sobrantes, sin vacías y sin repetir (sin distinguir mayúsculas)."""
+        limpias = {}
+        for etiqueta in value:
+            etiqueta = " ".join(etiqueta.split())
+            if etiqueta:
+                limpias.setdefault(etiqueta.casefold(), etiqueta)
+        return list(limpias.values())
+
+    def validate_categorias_extra(self, value):
+        """Categorías existentes y sin repetir; la principal se descarta en validate()."""
+        unicas = list(dict.fromkeys(v.strip() for v in value if v.strip()))
+        if unicas == (self.context.get('nota') or {}).get('categorias_extra', []):
+            return unicas  # el autoguardado las reenvía sin cambios: no se consulta
+        existentes = {
+            c["id_categoria"]
+            for c in db['Categoria'].find({"id_categoria": {"$in": unicas}}, {"_id": 0, "id_categoria": 1})
+        }
+        if any(v not in existentes for v in unicas):
+            raise serializers.ValidationError("Alguna de las categorías extra no existe.")
+        return unicas
+
     def validate_licencia(self, value):
         """Garantiza la distribución bajo Copyleft CC BY-SA 4.0."""
         if value != "CC BY-SA 4.0":
@@ -211,6 +250,13 @@ class NotaSerializer(serializers.Serializer):
         # Estado final de la nota: lo almacenado + lo recibido (PATCH parcial)
         nota_actual = self.context.get('nota') or {}
         final = {**nota_actual, **value}
+
+        # La categoría principal no se repite entre las extra
+        if 'categorias_extra' in value or 'id_categoria' in value:
+            principal = final.get('id_categoria')
+            extra = final.get('categorias_extra', [])
+            if principal in extra:
+                value['categorias_extra'] = [c for c in extra if c != principal]
 
         titulo = value.get('titulo')
         if titulo is not None:

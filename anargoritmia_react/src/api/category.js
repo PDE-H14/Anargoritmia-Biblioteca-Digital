@@ -11,6 +11,12 @@ function toFormData(data) {
     formData.append("imagen_portada", data.imagen_portada);
   }
 
+  // Punto de enfoque de la portada (% del ancho y del alto)
+  if (data.enfoque) {
+    formData.append("enfoque_x", data.enfoque.x);
+    formData.append("enfoque_y", data.enfoque.y);
+  }
+
   (data.padres || []).forEach((padre) => formData.append("padres", padre));
   return formData;
 }

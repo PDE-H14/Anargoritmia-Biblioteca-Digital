@@ -42,6 +42,35 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.lectura__otras {
+  margin: 8px 0 0 !important;
+  color: var(--soft);
+  font-size: 0.95rem;
+}
+.lectura__otras a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lectura__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 400 0.9rem var(--f-mono);
+}
+.lectura__etiquetas a {
+  color: var(--soft);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.lectura__etiquetas a:hover {
+  color: var(--fg);
+  text-decoration-color: currentColor;
+}
 .lectura__ficha {
   margin-top: 22px !important;
   font: 400 0.9rem var(--f-mono);

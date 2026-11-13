@@ -1,5 +1,6 @@
 from anargoritmia.pruebas_mongo import MongoAPITestCase
-from usuarios.models import Usuario
+from usuarios import repositorio
+from usuarios.repositorio import crear_usuario
 
 URL = "/api/notas/"
 
@@ -12,9 +13,9 @@ class NotasTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
-        self.otro = Usuario.objects.create_user(username="otro", email="otro@example.com", password="x")
-        self.admin = Usuario.objects.create_user(
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.otro = crear_usuario(username="otro", email="otro@example.com", password="x")
+        self.admin = crear_usuario(
             username="admin", email="admin@example.com", password="x", is_staff=True
         )
         self.client.force_authenticate(self.autora)
@@ -171,8 +172,8 @@ class DerechoAlOlvidoTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.usuario = Usuario.objects.create_user(username="ada", email="ada@example.com", password="clave")
-        self.admin = Usuario.objects.create_user(
+        self.usuario = crear_usuario(username="ada", email="ada@example.com", password="clave")
+        self.admin = crear_usuario(
             username="admin", email="admin@example.com", password="x", is_staff=True
         )
         self.client.force_authenticate(self.usuario)
@@ -227,7 +228,7 @@ class RedisenoNotasTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(
+        self.autora = crear_usuario(
             username="ada", email="ada@example.com", password="x", first_name="Ada", last_name="Lovelace"
         )
         self.client.force_authenticate(self.autora)
@@ -268,7 +269,7 @@ class RedisenoNotasTests(MongoAPITestCase):
         self.assertEqual(self.client.get(URL).data[0]["autor"]["firma"], "Ada Lovelace")
 
     def test_firma_nombre_sin_nombre_usa_alias(self):
-        sin_nombre = Usuario.objects.create_user(username="anon", email="anon@example.com", password="x",
+        sin_nombre = crear_usuario(username="anon", email="anon@example.com", password="x",
                                                  firma="nombre")
         self.client.force_authenticate(sin_nombre)
         self.assertEqual(self.crear()["autor"]["firma"], "anon")
@@ -351,9 +352,9 @@ class CorreccionesTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
-        self.lector = Usuario.objects.create_user(username="lee", email="lee@example.com", password="x")
-        self.otro = Usuario.objects.create_user(username="otro", email="otro@example.com", password="x")
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.lector = crear_usuario(username="lee", email="lee@example.com", password="x")
+        self.otro = crear_usuario(username="otro", email="otro@example.com", password="x")
         self.client.force_authenticate(self.autora)
         self.nota = self.client.post(URL, {
             "titulo": "Newton", "id_categoria": "cat-1", "es_borrador": False,
@@ -470,7 +471,7 @@ class BusquedaTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
         self.client.force_authenticate(self.autora)
         self.publicar("Teorema de Pitágoras", "En un triángulo rectángulo...", etiquetas=["geometría"])
         self.publicar("Método de Newton", "Aproxima raíces de funciones.", privado="secreto escondido")
@@ -519,9 +520,9 @@ class ModeracionTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
-        self.lector = Usuario.objects.create_user(username="lee", email="lee@example.com", password="x")
-        self.admin = Usuario.objects.create_user(username="admin", email="admin@example.com", password="x",
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.lector = crear_usuario(username="lee", email="lee@example.com", password="x")
+        self.admin = crear_usuario(username="admin", email="admin@example.com", password="x",
                                                  is_staff=True)
         self.client.force_authenticate(self.autora)
         self.nota = self.client.post(URL, {
@@ -582,8 +583,8 @@ class EjerciciosRutaYDerivadasTests(MongoAPITestCase):
     def setUp(self):
         super().setUp()
         self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
-        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
-        self.otra = Usuario.objects.create_user(username="emmy", email="emmy@example.com", password="x")
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.otra = crear_usuario(username="emmy", email="emmy@example.com", password="x")
         self.client.force_authenticate(self.autora)
 
     def publicar(self, titulo, bloques=None, **extra):
@@ -672,3 +673,58 @@ class EjerciciosRutaYDerivadasTests(MongoAPITestCase):
         original = self.publicar("Público")
         self.client.force_authenticate(None)
         self.assertEqual(self.client.post(f"{URL}{original['id_documento']}/derivar/").status_code, 401)
+
+
+class CategoriasExtraYEtiquetasTests(MongoAPITestCase):
+    """Una nota aparece en su categoría principal y en hasta tres más; etiquetas limpias."""
+
+    def setUp(self):
+        super().setUp()
+        for i, nombre in enumerate(["Álgebra", "Grafos", "Física", "Redes", "Lógica"], 1):
+            self.db["Categoria"].insert_one({"id_categoria": f"c{i}", "nombre": nombre, "ficha": f"f{i}", "padres": []})
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.client.force_authenticate(self.autora)
+
+    def publicar(self, **extra):
+        r = self.client.post(URL, {"titulo": "Matrices de adyacencia", "id_categoria": "c1", "es_borrador": False,
+                                   "bloques": [bloque("b1")], **extra}, format="json")
+        return r
+
+    def test_extra_aparece_en_filtro_y_lectura(self):
+        nota = self.publicar(categorias_extra=["c2", "c2", "c1"]).data
+        self.assertEqual(nota["categorias_extra"], ["c2"])  # sin repetir y sin la principal
+        self.client.force_authenticate(None)
+        self.assertEqual(len(self.client.get(URL, {"categoria": "c2"}).data), 1)
+        self.assertEqual(len(self.client.get(URL, {"categoria": "c1"}).data), 1)
+        self.assertEqual(len(self.client.get(URL, {"categoria": "c3"}).data), 0)
+        lectura = self.client.get(f"{URL}{nota['id_documento']}/").data
+        self.assertEqual([c["nombre"] for c in lectura["otras_categorias"]], ["Grafos"])
+        self.assertEqual(self.client.get(URL).data[0]["categorias_extra"], ["c2"])
+
+    def test_extra_inexistente_o_demasiadas_400(self):
+        self.assertEqual(self.publicar(categorias_extra=["nada"]).status_code, 400)
+        self.assertEqual(self.publicar(categorias_extra=["c2", "c3", "c4", "c5"]).status_code, 400)
+
+    def test_cambiar_principal_a_una_extra_la_quita_de_extra(self):
+        nota = self.publicar(categorias_extra=["c2", "c3"]).data
+        r = self.client.patch(f"{URL}{nota['id_documento']}/", {"id_categoria": "c2"}, format="json")
+        self.assertEqual(r.status_code, 200, r.data)
+        self.assertEqual(r.data["categorias_extra"], ["c3"])
+
+    def test_no_se_borra_categoria_usada_como_extra(self):
+        self.publicar(categorias_extra=["c2"])
+        admin = crear_usuario(username="admin", email="admin@example.com", password="x", is_staff=True)
+        self.client.force_authenticate(admin)
+        self.assertEqual(self.client.delete("/api/categorias/c2/").status_code, 400)
+
+    def test_etiquetas_limpias(self):
+        nota = self.publicar(etiquetas=["  grafos ", "Grafos", "", "teoría   espectral"]).data
+        self.assertEqual(nota["etiquetas"], ["grafos", "teoría espectral"])
+        self.assertEqual(self.publicar(etiquetas=[f"e{i}" for i in range(11)]).status_code, 400)
+
+    def test_derivar_conserva_categorias_extra(self):
+        nota = self.publicar(categorias_extra=["c3"]).data
+        otra = crear_usuario(username="emmy", email="emmy@example.com", password="x")
+        self.client.force_authenticate(otra)
+        derivada = self.client.post(f"{URL}{nota['id_documento']}/derivar/").data
+        self.assertEqual(derivada["categorias_extra"], ["c3"])

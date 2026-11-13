@@ -6,3 +6,5 @@ Anargoritmia\anargoritmia_django> .\envs\anargoritmia\Scripts\activate
 inicio React
 
 Anargoritmia\anargoritmia_react> yarn start
+
+mongodb+srv://<db_username>:<db_password>@anargoritmia.0i4ffyu.mongodb.net/

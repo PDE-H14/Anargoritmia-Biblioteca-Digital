@@ -26,6 +26,11 @@ class CategoriaSerializer(serializers.Serializer):
         default=list
     )
     imagen_portada = serializers.ImageField(required=False, allow_null=True)
+    # Punto de enfoque de la portada, en % del ancho y del alto (50/50 = centro).
+    # El catálogo recorta la banda 4:1 y la ficha 4:3 alrededor de él
+    # (object-position), así que lo importante de la imagen siempre se ve.
+    enfoque_x = serializers.FloatField(min_value=0, max_value=100, required=False)
+    enfoque_y = serializers.FloatField(min_value=0, max_value=100, required=False)
 
     def validate(self, value):
         # La ficha solo se (re)calcula cuando llega un nombre o una ficha explícita;
@@ -41,6 +46,10 @@ class CategoriaSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"nombre": "El nombre debe contener al menos una letra o número."}
             )
+
+        for eje in ('enfoque_x', 'enfoque_y'):
+            if eje in value:
+                value[eje] = round(value[eje], 1)
 
         if 'padres' in value and value.get('ficha') in value['padres']:
             raise serializers.ValidationError(
@@ -61,4 +70,7 @@ class CategoriaSerializer(serializers.Serializer):
         if imagen and imagen.startswith('/') and request is not None:
             imagen = request.build_absolute_uri(imagen)
         ret['imagen_portada'] = imagen
+        # Categorías anteriores al punto de enfoque: el centro
+        ret['enfoque_x'] = instance.get('enfoque_x', 50)
+        ret['enfoque_y'] = instance.get('enfoque_y', 50)
         return ret

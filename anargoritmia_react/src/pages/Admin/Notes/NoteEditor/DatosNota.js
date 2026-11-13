@@ -1,13 +1,33 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Campo } from "../../../../components/UI";
+import { SelectorCategorias } from "../../../../components/Common";
 import { RUTAS, leerNota } from "../../../../utils/constants";
+import { useNotaSugerencias } from "../../../../utils/sugerencias";
+import { EtiquetasNota } from "./EtiquetasNota";
+
+// Debe coincidir con MAX_CATEGORIAS_EXTRA en notas/api/serializers.py
+const MAX_CATEGORIAS_EXTRA = 3;
 
 /**
  * Panel lateral «Datos de la nota»: título, categoría, ficha, autoría,
  * licencia fija y, debajo (children), las correcciones de lectores.
  */
-export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esMia, onCambiar, origen, ruta, children }) {
+export function DatosNota({
+  titulo,
+  idCategoria,
+  categoriasExtra = [],
+  etiquetas = [],
+  categorias,
+  ficha,
+  autoria,
+  esMia,
+  onCambiar,
+  origen,
+  ruta,
+  children,
+}) {
+  const notaSugerencias = useNotaSugerencias();
   return (
     <aside className="datos-nota" aria-labelledby="datos-nota-titulo">
       <h2 id="datos-nota-titulo" className="datos-nota__titulo">
@@ -23,16 +43,40 @@ export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esM
         />
       </Campo>
 
-      <Campo id="nota-categoria" etiqueta="Categoría">
-        <select value={idCategoria || ""} onChange={(e) => onCambiar({ id_categoria: e.target.value })}>
-          <option value="">Sin categoría</option>
-          {categorias.map((c) => (
-            <option key={c.id_categoria} value={c.id_categoria}>
-              {c.nombre}
-            </option>
-          ))}
-        </select>
-      </Campo>
+      <SelectorCategorias
+        id="nota-categoria"
+        etiqueta="Categoría"
+        categorias={categorias}
+        valor={idCategoria || ""}
+        vacio="Sin categoría"
+        ayuda={
+          notaSugerencias ? (
+            <>
+              ¿No encuentras la tuya?{" "}
+              <a href={leerNota(notaSugerencias)} target="_blank" rel="noreferrer">
+                Sugiere una categoría
+              </a>
+              .
+            </>
+          ) : null
+        }
+        // La principal no se repite entre las extra
+        onCambiar={(id) => onCambiar({ id_categoria: id, categorias_extra: categoriasExtra.filter((c) => c !== id) })}
+      />
+
+      <SelectorCategorias
+        id="nota-categorias-extra"
+        etiqueta="También en"
+        categorias={categorias}
+        valor={categoriasExtra}
+        multiple
+        max={MAX_CATEGORIAS_EXTRA}
+        excluir={new Set(idCategoria ? [idCategoria] : [])}
+        ayuda={`Opcional: hasta ${MAX_CATEGORIAS_EXTRA} categorías más en las que también aparece en el catálogo.`}
+        onCambiar={(ids) => onCambiar({ categorias_extra: ids })}
+      />
+
+      <EtiquetasNota etiquetas={etiquetas} onCambiar={(lista) => onCambiar({ etiquetas: lista })} />
 
       <Campo id="nota-ficha" etiqueta="Ficha" mono ayuda={ficha ? null : "Se genera a partir del título al guardar."}>
         <input readOnly value={ficha || ""} />

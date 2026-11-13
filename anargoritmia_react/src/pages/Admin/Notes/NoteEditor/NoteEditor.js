@@ -38,7 +38,7 @@ function nuevoBloque(tipo) {
 }
 
 function notaVacia() {
-  return { titulo: "", id_categoria: "", es_borrador: true, fecha_publicacion: null };
+  return { titulo: "", id_categoria: "", categorias_extra: [], etiquetas: [], es_borrador: true, fecha_publicacion: null };
 }
 
 // Campos de metadatos que devuelve el servidor y que el editor no edita
@@ -93,6 +93,8 @@ export function NoteEditor() {
   datosRef.current = {
     titulo: nota?.titulo ?? "",
     id_categoria: nota?.id_categoria ?? "",
+    categorias_extra: nota?.categorias_extra ?? [],
+    etiquetas: nota?.etiquetas ?? [],
     prerrequisitos: nota?.prerrequisitos ?? [],
     bloques,
   };
@@ -448,6 +450,8 @@ export function NoteEditor() {
         <DatosNota
           titulo={nota.titulo}
           idCategoria={nota.id_categoria}
+          categoriasExtra={nota.categorias_extra || []}
+          etiquetas={nota.etiquetas || []}
           categorias={categorias}
           ficha={nota.ficha}
           autoria={autoria}

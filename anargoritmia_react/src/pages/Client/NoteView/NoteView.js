@@ -99,6 +99,17 @@ export function NoteView() {
               § {categoria.nombre}
             </Link>
           )}
+          {nota.otras_categorias?.length > 0 && (
+            <p className="lectura__otras">
+              También en{" "}
+              {nota.otras_categorias.map((c, i) => (
+                <React.Fragment key={c.id_categoria}>
+                  {i > 0 && ", "}
+                  <Link to={`/?categoria=${c.ficha}#catalogo`}>{c.nombre}</Link>
+                </React.Fragment>
+              ))}
+            </p>
+          )}
           <p className="lectura__ficha">{nota.ficha}</p>
           {esAutor && (
             <Link to={editarNota(nota.id_documento)} className="lectura__editar">
@@ -126,6 +137,17 @@ export function NoteView() {
               <a href="#nota-licencia">CC BY-SA 4.0</a>
             </span>
           </p>
+          {nota.etiquetas?.length > 0 && (
+            <ul className="lectura__etiquetas" aria-label="Etiquetas">
+              {nota.etiquetas.map((e) => (
+                <li key={e}>
+                  <Link to={`/?q=${encodeURIComponent(e)}#catalogo`} title={`Buscar «${e}» en el catálogo`}>
+                    #{e}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
           {nota.origen && (
             <p className="lectura__origen">
               Basada en{" "}

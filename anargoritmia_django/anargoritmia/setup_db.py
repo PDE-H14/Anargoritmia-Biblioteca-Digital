@@ -48,6 +48,12 @@ esquema_nota = {
                 "bsonType": "string",
                 "description": "UUID o identificador de la categoría a la que pertenece la nota."
             },
+            "categorias_extra": {
+                "bsonType": "array",
+                "maxItems": 3,
+                "items": {"bsonType": "string"},
+                "description": "Otras categorías en las que también aparece la nota (además de la principal)."
+            },
             "etiquetas": {
                 "bsonType": "array",
                 "items": {
@@ -154,6 +160,14 @@ esquema_categoria = {
             "imagen_portada": {
                 "bsonType":["string", "null"],
                 "description": "Ruta/URL del recurso gráfico para la tarjeta del catálogo en React."
+            },
+            "enfoque_x": {
+                "bsonType": ["double", "int"], "minimum": 0, "maximum": 100,
+                "description": "Punto de enfoque horizontal de la portada (%); el recorte se hace a su alrededor."
+            },
+            "enfoque_y": {
+                "bsonType": ["double", "int"], "minimum": 0, "maximum": 100,
+                "description": "Punto de enfoque vertical de la portada (%)."
             }
         }
     }
@@ -187,6 +201,34 @@ esquema_correccion = {
             "respuesta": {"bsonType": "string", "description": "Respuesta del autor de la nota."},
             "fecha_creacion": {"bsonType": "date"},
             "fecha_resolucion": {"bsonType": ["date", "null"]}
+        }
+    }
+}
+
+# Cuentas (antes en SQLite; ver usuarios/repositorio.py). La contraseña es el
+# hash de Django; email_clave y alias_clave son el correo y el alias en
+# minúsculas, con índice único.
+esquema_usuario = {
+    "$jsonSchema": {
+        "bsonType": "object",
+        "title": "Usuario",
+        "required": ["id_usuario", "username", "email", "password", "email_clave", "alias_clave",
+                     "is_active", "is_staff", "is_superuser"],
+        "properties": {
+            "id_usuario": {"bsonType": "string", "description": "Se conserva el id numérico de SQLite, como texto."},
+            "username": {"bsonType": "string", "maxLength": 150},
+            "email": {"bsonType": "string", "maxLength": 254},
+            "email_clave": {"bsonType": "string"},
+            "alias_clave": {"bsonType": "string"},
+            "first_name": {"bsonType": "string", "maxLength": 150},
+            "last_name": {"bsonType": "string", "maxLength": 150},
+            "firma": {"enum": ["alias", "nombre"]},
+            "password": {"bsonType": "string", "description": "Hash de Django (algoritmo$iteraciones$sal$hash)."},
+            "is_active": {"bsonType": "bool"},
+            "is_staff": {"bsonType": "bool"},
+            "is_superuser": {"bsonType": "bool"},
+            "date_joined": {"bsonType": ["date", "null"]},
+            "last_login": {"bsonType": ["date", "null"]}
         }
     }
 }
@@ -236,6 +278,16 @@ def inicializar_colecciones():
     else:
         actualizar_validador("Correccion", esquema_correccion)
 
+    # --- Gestión de la colección Usuario ---
+    if "Usuario" not in colecciones_existentes:
+        try:
+            db.create_collection("Usuario", validator=esquema_usuario)
+            print("Colección 'Usuario' creada exitosamente.")
+        except Exception as e:
+            print(f"Error al crear 'Usuario': {e}")
+    else:
+        actualizar_validador("Usuario", esquema_usuario)
+
 def inicializar_indices():
     """
     Garantiza la unicidad a nivel de motor de base de datos para evitar colisiones.
@@ -257,6 +309,7 @@ def inicializar_indices():
         # Índices de consulta: cada listado usa uno y no recorre la colección
         db['Nota'].create_index([("es_borrador", 1), ("fecha_publicacion", -1)])           # catálogo
         db['Nota'].create_index([("id_categoria", 1), ("es_borrador", 1), ("fecha_publicacion", -1)])  # por categoría
+        db['Nota'].create_index("categorias_extra")  # filtro por categoría y bloqueo al eliminarla
         db['Nota'].create_index([("autor.id_usuario", 1), ("fecha_modificacion", -1)])     # Mis notas
         db['Nota'].create_index("prerrequisitos")                                          # «para seguir»
         db['Categoria'].create_index("padres")                                             # subcategorías
@@ -264,6 +317,20 @@ def inicializar_indices():
         db['Correccion'].create_index("id_correccion", unique=True)
         db['Correccion'].create_index([("id_documento", 1), ("estado", 1), ("fecha_creacion", -1)])
         db['Correccion'].create_index([("autor.id_usuario", 1), ("id_documento", 1), ("estado", 1)])
+
+        # Portadas en WebP (categorias/imagenes.py)
+        db['Imagen'].create_index("id_imagen", unique=True)
+
+        # Cuentas y sesiones: los mismos que usuarios.repositorio.asegurar_indices()
+        db['Usuario'].create_index("id_usuario", unique=True)
+        db['Usuario'].create_index("email_clave", unique=True)
+        db['Usuario'].create_index("alias_clave", unique=True)
+        db['Usuario'].create_index([("is_staff", 1), ("is_active", 1)])
+        db['Sesion'].create_index("jti", unique=True)
+        db['Sesion'].create_index("id_usuario")
+        # TTL: MongoDB borra cada sesión cuando vence su token de renovación,
+        # sin comando flushexpiredtokens ni tarea programada.
+        db['Sesion'].create_index("expira", expireAfterSeconds=0)
 
         print("Índices de unicidad y de consulta configurados con éxito en MongoDB Atlas.")
     except Exception as e:

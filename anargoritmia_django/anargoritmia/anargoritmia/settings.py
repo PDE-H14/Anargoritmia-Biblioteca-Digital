@@ -42,19 +42,18 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-# Aplicaciones nativas de Django
-    'django.contrib.admin',
+# Aplicaciones nativas de Django. Sin base SQL no hay panel /admin/, sesiones
+# ni mensajes de Django: las cuentas están en MongoDB (usuarios/repositorio.py).
+# auth y contenttypes se conservan por los hashers y validadores de contraseña
+# y por AnonymousUser, que DRF usa para las peticiones sin sesión.
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
     'django.contrib.staticfiles',
 
     # Librerías de terceros
     'corsheaders',
     'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',  # revocar sesiones (salir, cambio de contraseña)
+    'rest_framework_simplejwt',  # firma y lectura de los JWT; las sesiones, en usuarios/sesiones.py
     'drf_yasg',
 
     # Módulos del proyecto Anargoritmia
@@ -66,12 +65,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -85,8 +81,6 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
             ],
         },
     },
@@ -98,12 +92,12 @@ WSGI_APPLICATION = 'anargoritmia.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# Sin base SQL: todo vive en MongoDB (db.py). Las cuentas se movieron de
+# SQLite en noviembre de 2026 con `manage.py migrar_usuarios_sqlite`.
+DATABASES = {}
+# La API no usa sesiones de Django (solo JWT). Este motor no necesita base y
+# es el que usa el cliente de pruebas de DRF al cerrar una sesión forzada.
+SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
 
 # Password validation
@@ -127,13 +121,9 @@ AUTH_PASSWORD_VALIDATORS = [
 REST_FRAMEWORK = {
     # Fallos de MongoDB -> 503 con mensaje claro (ver anargoritmia/excepciones.py)
     'EXCEPTION_HANDLER': 'anargoritmia.excepciones.manejador_excepciones',
+    # Solo JWT, con la cuenta leída de MongoDB (usuarios/autenticacion.py)
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        #Pruebas
-        'rest_framework.authentication.BasicAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-
-        #unico
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'usuarios.autenticacion.AutenticacionJWT',
     ),
     # Límite de correcciones comunitarias por persona (ver notas/api/correcciones.py)
     'DEFAULT_THROTTLE_RATES': {
@@ -161,8 +151,6 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/uploads/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'uploads')
 
-#Usuarios
-AUTH_USER_MODEL = "usuarios.Usuario"
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -175,13 +163,11 @@ CORS_ALLOW_CREDENTIALS = True
 # Sesión: un token de acceso corto y uno de renovación que rota en cada uso.
 # Un token robado sirve como mucho 15 minutos; la sesión sigue abierta
 # mientras se use y caduca tras 7 días sin actividad. Al salir o al cambiar
-# la contraseña, los tokens de renovación se revocan (lista negra).
+# la contraseña, los tokens de renovación se revocan. Rotación, revocación y
+# limpieza de sesiones vencidas: usuarios/sesiones.py (colección «Sesion»).
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "UPDATE_LAST_LOGIN": True,
     # Clave propia de los JWT: cambiarla invalida todas las sesiones sin tocar
     # SECRET_KEY. El sufijo «v2» anuló los tokens de 120 días anteriores.
     "SIGNING_KEY": os.getenv("JWT_SIGNING_KEY") or f"{SECRET_KEY}:jwt-v2",

@@ -191,13 +191,14 @@ class NotaViewSet(viewsets.GenericViewSet):
         """
         Catálogo público: notas publicadas, en versión ligera (sin el contenido
         de las celdas), de la más reciente a la más antigua.
-        Filtros opcionales: ?categoria=<id_categoria>, ?limite=<n> (máx. 500)
+        Filtros opcionales: ?categoria=<id_categoria> (principal o extra),
+        ?limite=<n> (máx. 500)
         y ?q=<palabras> (ver notas/busqueda.py).
         """
         query = {"es_borrador": False}
         id_categoria = request.query_params.get('categoria')
         if id_categoria:
-            query["id_categoria"] = id_categoria
+            query["$or"] = [{"id_categoria": id_categoria}, {"categorias_extra": id_categoria}]
         busqueda = filtro_busqueda(request.query_params.get('q'))
         if busqueda:
             query.update(busqueda)
@@ -252,6 +253,15 @@ class NotaViewSet(viewsets.GenericViewSet):
             )
             if categoria:
                 nota["categoria"] = categoria
+        if nota.get("categorias_extra"):
+            otras = {
+                c["id_categoria"]: c
+                for c in db["Categoria"].find(
+                    {"id_categoria": {"$in": nota["categorias_extra"]}},
+                    {"_id": 0, "id_categoria": 1, "nombre": 1, "ficha": 1},
+                )
+            }
+            nota["otras_categorias"] = [otras[i] for i in nota["categorias_extra"] if i in otras]
 
         nota["ruta"] = ruta_de_estudio(nota)
 
@@ -388,6 +398,7 @@ class NotaViewSet(viewsets.GenericViewSet):
             "id_documento": id_nuevo,
             "titulo": titulo_libre(nota.get("titulo") or "Nota sin título", autor["id_usuario"]),
             "id_categoria": nota.get("id_categoria", ""),
+            "categorias_extra": list(nota.get("categorias_extra", [])),
             "etiquetas": list(nota.get("etiquetas", [])),
             "prerrequisitos": list(nota.get("prerrequisitos", [])),
             "bloques": [dict(b) for b in fuente.get("bloques", [])],
