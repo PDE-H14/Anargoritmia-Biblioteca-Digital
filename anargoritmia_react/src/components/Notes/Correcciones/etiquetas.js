@@ -1,4 +1,4 @@
-const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación" };
+const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
 
 /** «Celda 2 · Código · newton.py», o un extracto del texto si no tiene nombre ni título. */
 export function etiquetaCelda(bloque, indice) {

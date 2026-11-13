@@ -17,7 +17,7 @@ const ESTADOS = [
   { valor: "descartada", texto: "Descartadas" },
   { valor: "", texto: "Todas" },
 ];
-const TIPOS_CELDA = { texto: "Texto", codigo: "Código", animacion: "Animación" };
+const TIPOS_CELDA = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
 // A partir de cuántas correcciones abiertas de una misma persona conviene revisarla
 const UMBRAL_ACTIVIDAD = 4;
 const DIA_MS = 24 * 60 * 60 * 1000;

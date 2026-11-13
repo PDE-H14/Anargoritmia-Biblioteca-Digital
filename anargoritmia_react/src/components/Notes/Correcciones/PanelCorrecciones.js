@@ -7,6 +7,31 @@ import { fechaCompleta, fechaRelativa } from "../../../utils/fechas";
 import { etiquetaCelda } from "./etiquetas";
 import "./Correcciones.css";
 
+/*
+ * Lleva un elemento a la vista dentro del contenedor que se desplaza: en
+ * pantallas anchas, el panel derecho (fijo y con desplazamiento propio); en
+ * angostas, la página. Se calcula a mano porque scrollIntoView movería
+ * también la página aunque el panel ya esté a la vista.
+ */
+function desplazarHasta(elemento) {
+  // Inmediato y no suave: el desplazamiento suave se cancela con el cambio de
+  // foco y el nuevo render; el resaltado de la corrección ya orienta la vista.
+  const suave = "auto";
+  let contenedor = elemento.parentElement;
+  while (contenedor && contenedor !== document.body) {
+    const { overflowY } = getComputedStyle(contenedor);
+    if (/(auto|scroll)/.test(overflowY) && contenedor.scrollHeight > contenedor.clientHeight) break;
+    contenedor = contenedor.parentElement;
+  }
+  if (!contenedor || contenedor === document.body) {
+    elemento.scrollIntoView({ block: "center", behavior: suave });
+    return;
+  }
+  const destino =
+    elemento.getBoundingClientRect().top - contenedor.getBoundingClientRect().top + contenedor.scrollTop - 16;
+  contenedor.scrollTo({ top: Math.max(0, destino), behavior: suave });
+}
+
 const ESTADOS = { abierta: "Abierta", atendida: "Atendida", descartada: "Descartada" };
 
 /**
@@ -14,7 +39,7 @@ const ESTADOS = { abierta: "Abierta", atendida: "Atendida", descartada: "Descart
  * `bloques` son las celdas actuales del taller: si la celda corregida ya no
  * existe se indica. `onConteo` recibe {id_bloque: abiertas} para marcar las celdas.
  */
-export function PanelCorrecciones({ idNota, token, bloques, onIrACelda, onConteo, mostrarAlCargar = false }) {
+export function PanelCorrecciones({ idNota, token, bloques, onIrACelda, onConteo, mostrarAlCargar = false, enfocada = null }) {
   const [lista, setLista] = useState(null);
   const [error, setError] = useState(null);
   const [verTodas, setVerTodas] = useState(false);
@@ -45,6 +70,26 @@ export function PanelCorrecciones({ idNota, token, bloques, onIrACelda, onConteo
       document.getElementById("correcciones")?.scrollIntoView({ block: "start" });
     }
   }, [mostrarAlCargar, lista]);
+
+  // Desde el aviso de una celda: baja a sus correcciones abiertas y las resalta un momento
+  const [resaltada, setResaltada] = useState(null);
+  useEffect(() => {
+    if (!enfocada || !lista) return undefined;
+    setVerTodas(false);
+    setResaltada(enfocada.idBloque);
+    const espera = setTimeout(() => {
+      const primera = document.querySelector(`[data-correccion-celda="${enfocada.idBloque}"]`);
+      if (!primera) return;
+      // El foco va primero: enfocar durante un desplazamiento suave lo cancela
+      primera.focus({ preventScroll: true });
+      desplazarHasta(primera);
+    }, 0);
+    const fin = setTimeout(() => setResaltada(null), 2400);
+    return () => {
+      clearTimeout(espera);
+      clearTimeout(fin);
+    };
+  }, [enfocada, lista]);
 
   const reemplazar = (actualizada) =>
     setLista((l) => l.map((c) => (c.id_correccion === actualizada.id_correccion ? actualizada : c)));
@@ -88,6 +133,7 @@ export function PanelCorrecciones({ idNota, token, bloques, onIrACelda, onConteo
             <ItemCorreccion
               key={c.id_correccion}
               correccion={c}
+              resaltada={resaltada === c.id_bloque}
               bloques={bloques}
               token={token}
               onIrACelda={onIrACelda}
@@ -100,7 +146,7 @@ export function PanelCorrecciones({ idNota, token, bloques, onIrACelda, onConteo
   );
 }
 
-function ItemCorreccion({ correccion, bloques, token, onIrACelda, onActualizada }) {
+function ItemCorreccion({ correccion, bloques, token, onIrACelda, onActualizada, resaltada = false }) {
   const { id_correccion, id_bloque, tipo_error, fragmento, descripcion, autor, estado, respuesta, fecha_creacion } =
     correccion;
   const [respondiendo, setRespondiendo] = useState(null); // "atendida" | "descartada"
@@ -126,7 +172,11 @@ function ItemCorreccion({ correccion, bloques, token, onIrACelda, onActualizada 
   };
 
   return (
-    <li className={`correccion correccion--${estado}`}>
+    <li
+      className={`correccion correccion--${estado} ${resaltada ? "correccion--resaltada" : ""}`}
+      data-correccion-celda={id_bloque}
+      tabIndex={-1}
+    >
       <p className="correccion__celda">
         {indice >= 0 ? (
           <button type="button" onClick={() => onIrACelda?.(id_bloque)} title="Ir a la celda">

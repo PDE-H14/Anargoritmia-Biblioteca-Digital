@@ -28,6 +28,7 @@ ERRORES_POR_CELDA = {
     "texto": ["matematico", "redaccion", "referencia"],
     "codigo": ["codigo", "replicacion", "matematico", "redaccion"],
     "animacion": ["codigo", "matematico", "redaccion"],
+    "ejercicio": ["matematico", "redaccion", "referencia"],
 }
 
 ESTADOS = ("abierta", "atendida", "descartada")

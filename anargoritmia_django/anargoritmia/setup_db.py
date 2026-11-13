@@ -67,7 +67,9 @@ esquema_nota = {
                     "required": ["id", "tipo", "publico", "contenido"],
                     "properties": {
                         "id": {"bsonType": "string"},
-                        "tipo": {"enum": ["texto", "codigo", "animacion"]},
+                        "tipo": {"enum": ["texto", "codigo", "animacion", "ejercicio"]},
+                        "pista": {"bsonType": "string", "description": "Pista de un ejercicio (Markdown + KaTeX)."},
+                        "solucion": {"bsonType": "string", "description": "Solución de un ejercicio (Markdown + KaTeX)."},
                         "publico": {
                             "bsonType": "bool",
                             "description": "Si el bloque aparece en la versión publicada."
@@ -92,6 +94,15 @@ esquema_nota = {
                     "publicas": {"bsonType": "int"},
                     "tipos_publicos": {"bsonType": "array", "items": {"bsonType": "string"}}
                 }
+            },
+            "prerrequisitos": {
+                "bsonType": "array",
+                "items": {"bsonType": "string"},
+                "description": "Notas publicadas que conviene leer antes (ruta de estudio)."
+            },
+            "origen": {
+                "bsonType": ["object", "null"],
+                "description": "Nota de la que se derivó esta: id_documento, título y firma (atribución CC BY-SA)."
             },
             "revision": {
                 "bsonType": ["int", "long"],
@@ -158,7 +169,7 @@ esquema_correccion = {
             "id_correccion": {"bsonType": "string"},
             "id_documento": {"bsonType": "string", "description": "Nota corregida."},
             "id_bloque": {"bsonType": "string", "description": "Celda pública a la que se refiere."},
-            "tipo_bloque": {"enum": ["texto", "codigo", "animacion"]},
+            "tipo_bloque": {"enum": ["texto", "codigo", "animacion", "ejercicio"]},
             "tipo_error": {"enum": ["matematico", "codigo", "replicacion", "redaccion", "referencia"]},
             "fragmento": {"bsonType": "string", "description": "Cita opcional del pasaje exacto."},
             "descripcion": {"bsonType": "string", "minLength": 20, "maxLength": 2000},
@@ -247,6 +258,7 @@ def inicializar_indices():
         db['Nota'].create_index([("es_borrador", 1), ("fecha_publicacion", -1)])           # catálogo
         db['Nota'].create_index([("id_categoria", 1), ("es_borrador", 1), ("fecha_publicacion", -1)])  # por categoría
         db['Nota'].create_index([("autor.id_usuario", 1), ("fecha_modificacion", -1)])     # Mis notas
+        db['Nota'].create_index("prerrequisitos")                                          # «para seguir»
         db['Categoria'].create_index("padres")                                             # subcategorías
 
         db['Correccion'].create_index("id_correccion", unique=True)

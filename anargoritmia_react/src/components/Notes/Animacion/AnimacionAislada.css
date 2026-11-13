@@ -46,6 +46,69 @@
   font-size: 0.85rem;
   overflow-wrap: anywhere;
 }
+/* Deslizadores declarados con parametro(): fuera del iframe, con la letra de la interfaz */
+.animacion__parametros {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 12px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radio);
+  font-family: var(--f-ui);
+}
+.animacion__parametros legend {
+  padding: 0 4px;
+  color: var(--soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.animacion__parametro {
+  display: grid;
+  /* Columna de nombres fija: todos los deslizadores miden lo mismo */
+  grid-template-columns: minmax(0, 11em) minmax(0, 1fr) 4.5em;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--toque);
+}
+.animacion__parametro-nombre {
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+.animacion__parametro input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--fg);
+  cursor: pointer;
+}
+.animacion__parametro input:focus-visible {
+  outline: none;
+  box-shadow: var(--foco);
+}
+.animacion__parametro-valor {
+  color: var(--soft);
+  font-family: var(--f-mono);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.animacion__parametros > .boton {
+  justify-self: start;
+}
+/* En pantallas angostas el deslizador ocupa su propia línea */
+@media (max-width: 480px) {
+  .animacion__parametro {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 12px;
+    padding-bottom: 6px;
+  }
+  .animacion__parametro input {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 32px;
+  }
+}
+
 .animacion__vacia {
   margin: 0;
   color: var(--mut);

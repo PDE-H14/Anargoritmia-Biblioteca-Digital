@@ -273,7 +273,70 @@
   }
 }
 
-/* Código de una animación: plegado bajo la escena */
+/* ---- Versión derivada y ruta de estudio ---- */
+.lectura__derivar {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  min-height: var(--toque);
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: 700 0.95rem/1.3 var(--f-ui);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.lectura__derivar:disabled {
+  cursor: progress;
+  color: var(--mut);
+}
+.lectura__origen {
+  margin: 8px 0 0 !important;
+  color: var(--soft);
+  font-style: italic;
+}
+.lectura__origen a,
+.lectura__ruta-lista a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lectura__ruta-lista {
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+/* ---- Ejercicios: enunciado y, plegadas, la pista y la solución ---- */
+.lectura__ejercicio {
+  padding: 4px 0 4px 18px;
+  border-left: 4px solid var(--margin);
+}
+.lectura__ejercicio-titulo {
+  margin: 0 0 6px !important;
+  font-size: 1.3rem;
+}
+.lectura__plegable {
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.lectura__plegable summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--toque);
+  cursor: pointer;
+  color: var(--soft);
+  font-family: var(--f-ui);
+  font-weight: 700;
+}
+.lectura__plegable[open] summary {
+  color: var(--fg);
+}
+
+/* ---- Animación: escena y, plegado debajo, su código ---- */
 /* Escena y controles con el mismo margen interior que el título de la figura */
 .lectura__algoritmo > .animacion {
   padding: 16px 18px 4px;

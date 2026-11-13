@@ -4,6 +4,11 @@ import "./AnimacionAislada.css";
 
 const ALTO_INICIAL = 300;
 const ALTO_MAXIMO = 640;
+// Deslizadores que puede declarar una animación con parametro()
+const MAX_PARAMETROS = 6;
+const MAX_PASOS = 10000;
+// Pausa tras mover un deslizador antes de reiniciar la escena con el nuevo valor
+const ESPERA_PARAMETRO_MS = 200;
 // Copia local de Anime.js (scripts/copiar-vendor.js); nunca un CDN
 const URL_ANIME = `${process.env.PUBLIC_URL || ""}/vendor/anime.umd.min.js`;
 
@@ -44,16 +49,26 @@ function coloresDelTema() {
   };
 }
 
+// JSON dentro de un <script>: sin «<» literal no puede cerrar la etiqueta
+const jsonIncrustable = (valor) => JSON.stringify(valor).replace(/</g, "\\u003c");
+
 /*
  * Documento que corre dentro del iframe. El código de la celda va en su
  * propio <script>, después de Anime.js y de preparar el entorno:
  *   - `escena`: el elemento donde dibujar;
  *   - las funciones de Anime.js como globales (animate, createTimeline, stagger, utils, svg...);
+ *   - `parametro(nombre, min, max, inicial, paso)`: declara un deslizador
+ *     para el lector y devuelve su valor actual (el inicial la primera vez);
  *   - variables CSS --bg, --fg, --mut, --acc y --line con los colores del tema.
  * La política de seguridad (CSP) solo admite los scripts incrustados: el
  * documento no puede cargar nada ni conectarse a ningún servidor.
+ *
+ * Los deslizadores se dibujan fuera del iframe, en la página: al moverlos
+ * se vuelve a crear el documento con los nuevos `valores`. Así cada valor
+ * arranca una escena limpia y el autor escribe código ordinario, sin
+ * manejar eventos.
  */
-function documentoAislado(codigo, bibliotecaAnime, id, colores) {
+function documentoAislado(codigo, bibliotecaAnime, id, colores, valores) {
   const csp = ["default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'", "img-src data: blob:"].join(
     "; "
   );
@@ -71,8 +86,30 @@ html{overflow:hidden}
 </head><body><div id="escena"></div>
 <script>
 (function () {
+  var definidos = [];
+  var valores = ${jsonIncrustable(valores || {})};
   var avisar = function (tipo, detalle) {
-    parent.postMessage({ origen: "anargoritmia-animacion", id: ${idSeguro}, tipo: tipo, detalle: detalle }, "*");
+    parent.postMessage({ origen: "anargoritmia-animacion", id: ${idSeguro}, tipo: tipo, detalle: detalle, parametros: definidos }, "*");
+  };
+  window.__avisar = avisar;
+  window.parametro = function (nombre, min, max, inicial, paso) {
+    nombre = String(nombre == null ? "" : nombre).trim().slice(0, 40);
+    min = Number(min);
+    max = Number(max);
+    if (!nombre || !isFinite(min) || !isFinite(max) || !(min < max)) {
+      throw new Error("parametro(nombre, min, max, inicial, paso): revisa el nombre y que min sea menor que max.");
+    }
+    paso = Number(paso);
+    if (!isFinite(paso) || paso <= 0 || (max - min) / paso > ${MAX_PASOS}) paso = (max - min) / 100;
+    inicial = Number(inicial);
+    inicial = isFinite(inicial) ? Math.min(max, Math.max(min, inicial)) : min;
+    var limitar = function (v) { v = Number(v); return isFinite(v) ? Math.min(max, Math.max(min, v)) : inicial; };
+    for (var i = 0; i < definidos.length; i++) {
+      if (definidos[i].nombre === nombre) return limitar(nombre in valores ? valores[nombre] : definidos[i].inicial);
+    }
+    if (definidos.length >= ${MAX_PARAMETROS}) throw new Error("Una animación admite hasta ${MAX_PARAMETROS} parámetros.");
+    definidos.push({ nombre: nombre, min: min, max: max, inicial: inicial, paso: paso });
+    return nombre in valores ? limitar(valores[nombre]) : inicial;
   };
   window.__fallo = false;
   window.onerror = function (mensaje, _a, linea) {
@@ -95,11 +132,41 @@ html{overflow:hidden}
 <script>
 ${incrustable(codigo)}
 </script>
-<script>if (!window.__fallo) parent.postMessage({ origen: "anargoritmia-animacion", id: ${idSeguro}, tipo: "lista" }, "*");</script>
+<script>if (!window.__fallo && window.__avisar) window.__avisar("lista");</script>
 </body></html>`;
 }
 
 let contador = 0;
+
+// Lo que declara el código ajeno se revisa otra vez antes de dibujarlo
+function parametrosValidos(lista) {
+  if (!Array.isArray(lista)) return [];
+  const vistos = new Set();
+  return lista
+    .filter(
+      (p) =>
+        p &&
+        typeof p.nombre === "string" &&
+        p.nombre.length > 0 &&
+        p.nombre.length <= 40 &&
+        !vistos.has(p.nombre) &&
+        vistos.add(p.nombre) &&
+        [p.min, p.max, p.inicial, p.paso].every(Number.isFinite) &&
+        p.min < p.max &&
+        p.paso > 0 &&
+        (p.max - p.min) / p.paso <= MAX_PASOS
+    )
+    .slice(0, MAX_PARAMETROS)
+    .map(({ nombre, min, max, inicial, paso }) => ({ nombre, min, max, inicial, paso }));
+}
+
+// Decimales con los que se muestra un valor: los del paso, hasta 4
+const decimalesDe = (paso) => Math.min(4, (String(paso).split(".")[1] || "").length);
+const redondear = (valor, paso) => Number(valor.toFixed(decimalesDe(paso)));
+
+const mismosParametros = (a, b) =>
+  a.length === b.length &&
+  a.every((p, i) => ["nombre", "min", "max", "inicial", "paso"].every((k) => p[k] === b[i][k]));
 
 /**
  * Ejecuta el código de una celda de animación en un iframe aislado
@@ -119,6 +186,13 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
   const [documento, setDocumento] = useState("");
   const [error, setError] = useState(null);
   const [alto, setAlto] = useState(ALTO_INICIAL);
+  // Deslizadores que declaró el código con parametro() y los valores elegidos
+  const [parametros, setParametros] = useState([]);
+  const [valores, setValores] = useState({});
+  const valoresRef = useRef({});
+  const temporizadorRef = useRef(null);
+
+  useEffect(() => () => clearTimeout(temporizadorRef.current), []);
 
   // Mensajes del iframe: solo se aceptan los de su propia ventana
   useEffect(() => {
@@ -126,6 +200,10 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
       const datos = e.data;
       if (!iframeRef.current || e.source !== iframeRef.current.contentWindow) return;
       if (!datos || datos.origen !== "anargoritmia-animacion" || datos.id !== id) return;
+      if (datos.parametros) {
+        const nuevos = parametrosValidos(datos.parametros);
+        setParametros((previos) => (mismosParametros(previos, nuevos) ? previos : nuevos));
+      }
       if (datos.tipo === "lista") setFase("corriendo");
       if (datos.tipo === "error") {
         setFase("error");
@@ -139,19 +217,40 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
     return () => window.removeEventListener("message", alRecibir);
   }, [id]);
 
-  const reproducir = useCallback(async () => {
-    setError(null);
-    setAlto(ALTO_INICIAL);
-    setFase("cargando");
-    try {
-      const biblioteca = await cargarAnime();
-      setDocumento(documentoAislado(codigo || "", biblioteca, id, coloresDelTema()));
-      setEjecucion((n) => n + 1);
-    } catch (e) {
-      setFase("error");
-      setError(e.message);
-    }
-  }, [codigo, id]);
+  // `conservarEscena`: al mover un deslizador no se reinicia el alto ni se
+  // ocultan los controles, para que la página no salte mientras se ajusta.
+  const reproducir = useCallback(
+    async (conservarEscena = false) => {
+      clearTimeout(temporizadorRef.current);
+      setError(null);
+      if (!conservarEscena) {
+        setAlto(ALTO_INICIAL);
+        setFase("cargando");
+      }
+      try {
+        const biblioteca = await cargarAnime();
+        setDocumento(documentoAislado(codigo || "", biblioteca, id, coloresDelTema(), valoresRef.current));
+        setEjecucion((n) => n + 1);
+        if (conservarEscena) setFase("corriendo");
+      } catch (e) {
+        setFase("error");
+        setError(e.message);
+      }
+    },
+    [codigo, id]
+  );
+
+  const cambiarValor = (nombre, valor) => {
+    valoresRef.current = { ...valoresRef.current, [nombre]: valor };
+    setValores(valoresRef.current);
+    clearTimeout(temporizadorRef.current);
+    temporizadorRef.current = setTimeout(() => reproducir(true), ESPERA_PARAMETRO_MS);
+  };
+  const restablecer = () => {
+    valoresRef.current = {};
+    setValores({});
+    reproducir(true);
+  };
 
   const ordenar = (orden) => iframeRef.current?.contentWindow?.postMessage({ orden }, "*");
   const pausar = () => {
@@ -163,6 +262,7 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
     setFase("corriendo");
   };
   const detener = () => {
+    clearTimeout(temporizadorRef.current);
     setFase("detenida");
     setEjecucion(0);
     setDocumento("");
@@ -173,19 +273,21 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
   }
 
   const activa = ejecucion > 0 && fase !== "detenida";
+  const valorDe = (p) => (Number.isFinite(valores[p.nombre]) ? valores[p.nombre] : p.inicial);
+  const modificados = parametros.some((p) => valorDe(p) !== p.inicial);
 
   return (
     <div className={`animacion animacion--${fase}`}>
       <div className="animacion__controles" role="group" aria-label={`Controles de ${titulo}`}>
         {!activa && (
-          <Boton variante="principal" cargando={fase === "cargando"} onClick={reproducir}>
+          <Boton variante="principal" cargando={fase === "cargando"} onClick={() => reproducir()}>
             ▶ Reproducir
           </Boton>
         )}
         {fase === "corriendo" && <Boton onClick={pausar}>Pausar</Boton>}
         {fase === "pausada" && <Boton onClick={reanudar}>Reanudar</Boton>}
         {activa && (
-          <Boton variante="secundario" onClick={reproducir}>
+          <Boton variante="secundario" onClick={() => reproducir()}>
             Reiniciar
           </Boton>
         )}
@@ -217,6 +319,34 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
             Corre aislada: no puede leer tu sesión, cambiar esta página ni conectarse a internet.
           </p>
         </div>
+      )}
+
+      {activa && parametros.length > 0 && (
+        <fieldset className="animacion__parametros">
+          <legend>Parámetros</legend>
+          {parametros.map((p) => {
+            const valor = valorDe(p);
+            return (
+              <label key={p.nombre} className="animacion__parametro">
+                <span className="animacion__parametro-nombre">{p.nombre}</span>
+                <input
+                  type="range"
+                  min={p.min}
+                  max={p.max}
+                  step={p.paso}
+                  value={valor}
+                  onChange={(e) => cambiarValor(p.nombre, redondear(Number(e.target.value), p.paso))}
+                />
+                <output className="animacion__parametro-valor">{valor.toFixed(decimalesDe(p.paso))}</output>
+              </label>
+            );
+          })}
+          {modificados && (
+            <Boton variante="enlace" onClick={restablecer}>
+              Valores iniciales
+            </Boton>
+          )}
+        </fieldset>
       )}
 
       {fase === "error" && (

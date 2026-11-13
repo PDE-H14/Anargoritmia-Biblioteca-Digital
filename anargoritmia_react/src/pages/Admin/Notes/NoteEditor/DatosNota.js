@@ -1,13 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Campo } from "../../../../components/UI";
-import { RUTAS } from "../../../../utils/constants";
+import { RUTAS, leerNota } from "../../../../utils/constants";
 
 /**
  * Panel lateral «Datos de la nota»: título, categoría, ficha, autoría,
  * licencia fija y, debajo (children), las correcciones de lectores.
  */
-export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esMia, onCambiar, children }) {
+export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esMia, onCambiar, origen, ruta, children }) {
   return (
     <aside className="datos-nota" aria-labelledby="datos-nota-titulo">
       <h2 id="datos-nota-titulo" className="datos-nota__titulo">
@@ -51,6 +51,20 @@ export function DatosNota({ titulo, idCategoria, categorias, ficha, autoria, esM
       >
         <input readOnly value={autoria} />
       </Campo>
+
+      {origen && (
+        <div className="datos-nota__origen">
+          <p className="campo__etiqueta">Basada en</p>
+          <p className="datos-nota__nota">
+            <a href={leerNota(origen.id_documento)} target="_blank" rel="noreferrer">
+              {origen.titulo || "Nota sin título"}
+            </a>{" "}
+            de {origen.firma || "autoría comunitaria"}. La atribución se muestra al publicar, como pide la licencia.
+          </p>
+        </div>
+      )}
+
+      {ruta}
 
       <div className="datos-nota__licencia">
         <p className="campo__etiqueta" id="nota-licencia">

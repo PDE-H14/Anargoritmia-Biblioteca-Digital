@@ -574,3 +574,101 @@ class ModeracionTests(MongoAPITestCase):
                               {"estado": "atendida", "respuesta": "Revisado por la administración."}, format="json")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.client.delete(f"/api/correcciones/{self.c2['id_correccion']}/").status_code, 204)
+
+
+class EjerciciosRutaYDerivadasTests(MongoAPITestCase):
+    """Celdas de ejercicio, ruta de estudio (prerrequisitos) y versiones derivadas."""
+
+    def setUp(self):
+        super().setUp()
+        self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
+        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
+        self.otra = Usuario.objects.create_user(username="emmy", email="emmy@example.com", password="x")
+        self.client.force_authenticate(self.autora)
+
+    def publicar(self, titulo, bloques=None, **extra):
+        r = self.client.post(URL, {"titulo": titulo, "id_categoria": "cat-1", "es_borrador": False,
+                                   "bloques": bloques or [bloque("b1")], **extra}, format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+        return r.data
+
+    # --- Ejercicios ---------------------------------------------------------
+    def test_ejercicio_guarda_pista_y_solucion(self):
+        nota = self.publicar("Ejercicios", [bloque("e1", tipo="ejercicio", contenido="Calcula $\int_0^1 x\,dx$.",
+                                                   pista="Usa la regla de la potencia.", solucion="$1/2$")])
+        celda = nota["bloques"][0]
+        self.assertEqual(celda["tipo"], "ejercicio")
+        self.assertEqual(celda["pista"], "Usa la regla de la potencia.")
+        self.assertEqual(celda["solucion"], "$1/2$")
+
+    def test_busqueda_encuentra_enunciado_pero_no_solucion(self):
+        self.publicar("Ejercicios", [bloque("e1", tipo="ejercicio", contenido="Encuentra el determinante.",
+                                            solucion="Respuesta secreta cuarenta y dos")])
+        self.client.force_authenticate(None)
+        self.assertEqual(len(self.client.get(URL, {"q": "determinante"}).data), 1)
+        self.assertEqual(len(self.client.get(URL, {"q": "secreta"}).data), 0)
+
+    def test_ejercicio_admite_correcciones_de_su_tipo(self):
+        nota = self.publicar("Ejercicios", [bloque("e1", tipo="ejercicio", contenido="Enunciado")])
+        self.client.force_authenticate(self.otra)
+        base = f"{URL}{nota['id_documento']}/correcciones/"
+        texto = "La solución omite el caso en que el denominador es cero."
+        self.assertEqual(self.client.post(base, {"id_bloque": "e1", "tipo_error": "matematico",
+                                                 "descripcion": texto}, format="json").status_code, 201)
+        self.assertEqual(self.client.post(base, {"id_bloque": "e1", "tipo_error": "codigo",
+                                                 "descripcion": texto}, format="json").status_code, 400)
+
+    # --- Ruta de estudio ----------------------------------------------------
+    def test_prerrequisitos_y_notas_que_siguen(self):
+        base = self.publicar("Límites")
+        nota = self.publicar("Derivadas", prerrequisitos=[base["id_documento"]])
+        self.client.force_authenticate(None)
+        lectura = self.client.get(f"{URL}{nota['id_documento']}/").data
+        self.assertEqual([p["titulo"] for p in lectura["ruta"]["prerrequisitos"]], ["Límites"])
+        anterior = self.client.get(f"{URL}{base['id_documento']}/").data
+        self.assertEqual([s["titulo"] for s in anterior["ruta"]["siguen"]], ["Derivadas"])
+
+    def test_prerrequisito_debe_ser_nota_publicada(self):
+        borrador = self.client.post(URL, {"titulo": "Borrador"}, format="json").data
+        r = self.client.post(URL, {"titulo": "X", "prerrequisitos": [borrador["id_documento"]]}, format="json")
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post(URL, {"titulo": "Y", "prerrequisitos": ["no-existe"]}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_nota_no_es_prerrequisito_de_si_misma(self):
+        nota = self.publicar("Límites")
+        r = self.client.patch(f"{URL}{nota['id_documento']}/", {"prerrequisitos": [nota["id_documento"]]}, format="json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_ruta_no_expone_borradores(self):
+        base = self.publicar("Límites")
+        nota = self.publicar("Derivadas", prerrequisitos=[base["id_documento"]])
+        self.client.patch(f"{URL}{nota['id_documento']}/", {"es_borrador": True}, format="json")
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get(f"{URL}{base['id_documento']}/").data["ruta"]["siguen"], [])
+
+    # --- Versiones derivadas ------------------------------------------------
+    def test_derivar_nota_ajena_copia_solo_publicas_con_atribucion(self):
+        original = self.publicar("Teorema", [bloque("b1"), bloque("b2", publico=False, contenido="privado")])
+        self.client.force_authenticate(self.otra)
+        r = self.client.post(f"{URL}{original['id_documento']}/derivar/", format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+        self.assertTrue(r.data["es_borrador"])
+        self.assertEqual(r.data["autor"]["alias"], "emmy")
+        self.assertEqual([b["id"] for b in r.data["bloques"]], ["b1"])
+        self.assertEqual(r.data["origen"], {"id_documento": original["id_documento"], "titulo": "Teorema", "firma": "ada"})
+        self.assertEqual(r.data["licencia"], "CC BY-SA 4.0")
+
+    def test_derivar_propia_dos_veces_no_choca_por_titulo(self):
+        original = self.publicar("Teorema")
+        t1 = self.client.post(f"{URL}{original['id_documento']}/derivar/", format="json").data["titulo"]
+        t2 = self.client.post(f"{URL}{original['id_documento']}/derivar/", format="json").data["titulo"]
+        self.assertEqual([t1, t2], ["Teorema (versión 2)", "Teorema (versión 3)"])
+
+    def test_no_se_deriva_borrador_ajeno_ni_sin_sesion(self):
+        borrador = self.client.post(URL, {"titulo": "Privado"}, format="json").data
+        self.client.force_authenticate(self.otra)
+        self.assertEqual(self.client.post(f"{URL}{borrador['id_documento']}/derivar/").status_code, 404)
+        original = self.publicar("Público")
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.post(f"{URL}{original['id_documento']}/derivar/").status_code, 401)

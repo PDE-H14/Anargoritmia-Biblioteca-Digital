@@ -2,7 +2,7 @@
 
 export const ALIAS_COMUNIDAD = "Comunidad Anargoritmia";
 
-const NOMBRES_TIPO = { texto: "texto", codigo: "código", animacion: "animación" };
+const NOMBRES_TIPO = { texto: "texto", codigo: "código", animacion: "animación", ejercicio: "ejercicios" };
 
 /** «texto + código» a partir de los tipos de celdas públicas que entrega el listado. */
 export function tiposDeCeldas(celdas) {
@@ -36,6 +36,7 @@ export const ERRORES_POR_CELDA = {
   texto: ["matematico", "redaccion", "referencia"],
   codigo: ["codigo", "replicacion", "matematico", "redaccion"],
   animacion: ["codigo", "matematico", "redaccion"],
+  ejercicio: ["matematico", "redaccion", "referencia"],
 };
 
 export const AYUDA_ERROR = {

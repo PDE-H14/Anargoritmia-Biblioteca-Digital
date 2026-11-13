@@ -3,7 +3,8 @@ import re
 import unicodedata
 from db import db
 
-TIPOS_BLOQUE = ("texto", "codigo", "animacion")
+TIPOS_BLOQUE = ("texto", "codigo", "animacion", "ejercicio")
+MAX_PRERREQUISITOS = 5
 MAX_BLOQUES = 300
 MAX_CARACTERES_BLOQUE = 100_000
 # Nombre de archivo de una celda: letras, números, punto, guion y guion bajo
@@ -44,7 +45,9 @@ class BloqueSerializer(serializers.Serializer):
     Unidad atómica de una nota (al estilo de las celdas de un cuaderno):
     - texto: Markdown con notación matemática KaTeX ($...$ y $$...$$).
     - codigo: código fuente para lectura, con lenguaje, versión y notas de replicación.
-    - animacion: código JavaScript (Anime.js) que se ejecutará en un entorno aislado.
+    - animacion: código JavaScript (Anime.js) que se ejecuta en un entorno aislado.
+    - ejercicio: enunciado en `contenido`, con `pista` y `solucion` opcionales
+      (Markdown + KaTeX); el lector las abre cuando quiere, después de intentarlo.
     `publico` decide si el bloque aparece en la versión publicada de la nota.
     `archivo` (p. ej. «newton.py») y `titulo` («Método de Newton») son
     opcionales; el cliente deriva un nombre si `archivo` queda vacío.
@@ -60,6 +63,10 @@ class BloqueSerializer(serializers.Serializer):
     lenguaje = serializers.CharField(allow_blank=True, default="", max_length=50)
     version = serializers.CharField(allow_blank=True, default="", max_length=50)
     notas = serializers.CharField(allow_blank=True, default="", max_length=5_000)
+    pista = serializers.CharField(allow_blank=True, default="", max_length=20_000, trim_whitespace=False)
+    solucion = serializers.CharField(
+        allow_blank=True, default="", max_length=MAX_CARACTERES_BLOQUE, trim_whitespace=False
+    )
 
     def validate_archivo(self, value):
         value = value.strip()
@@ -113,6 +120,10 @@ class NotaSerializer(serializers.Serializer):
     fecha_modificacion = serializers.DateTimeField(read_only=True)
     celdas = ResumenCeldasSerializer(read_only=True)
     categoria = serializers.DictField(read_only=True, required=False)
+    # Nota de la que se derivó esta (CC BY-SA obliga a atribuirla)
+    origen = serializers.DictField(read_only=True, required=False, allow_null=True)
+    # Ruta de estudio resuelta para la lectura: prerrequisitos y notas que siguen
+    ruta = serializers.DictField(read_only=True, required=False)
     # Contador de versiones para el control de concurrencia: si se envía,
     # el guardado solo procede si la nota no cambió desde esa revisión.
     revision = serializers.IntegerField(required=False, min_value=0)
@@ -135,13 +146,42 @@ class NotaSerializer(serializers.Serializer):
         max_length=MAX_BLOQUES,
     )
     es_borrador = serializers.BooleanField(default=True)
+    # Notas que conviene leer antes (identificadores de notas publicadas)
+    prerrequisitos = serializers.ListField(
+        child=serializers.CharField(max_length=64),
+        allow_empty=True,
+        required=False,
+        default=list,
+        max_length=MAX_PRERREQUISITOS,
+    )
 
     def to_representation(self, instancia):
         datos = super().to_representation(instancia)
         datos["revision"] = instancia.get("revision", 0)
-        if "categoria" not in instancia:
-            datos.pop("categoria", None)
+        datos["prerrequisitos"] = instancia.get("prerrequisitos", [])
+        for opcional in ("categoria", "origen", "ruta"):
+            if opcional not in instancia:
+                datos.pop(opcional, None)
         return datos
+
+    def validate_prerrequisitos(self, value):
+        """Solo notas publicadas, sin repetir y nunca la propia nota."""
+        propia = self.context.get('id_documento')
+        unicos = list(dict.fromkeys(v.strip() for v in value if v.strip()))
+        if propia in unicos:
+            raise serializers.ValidationError("Una nota no puede ser prerrequisito de sí misma.")
+        if unicos == (self.context.get('nota') or {}).get('prerrequisitos', []):
+            return unicos  # el autoguardado los reenvía sin cambios: no se consulta
+        existentes = {
+            n["id_documento"]
+            for n in db['Nota'].find(
+                {"id_documento": {"$in": unicos}, "es_borrador": False}, {"_id": 0, "id_documento": 1}
+            )
+        }
+        faltantes = [v for v in unicos if v not in existentes]
+        if faltantes:
+            raise serializers.ValidationError("Los prerrequisitos deben ser notas publicadas.")
+        return unicos
 
     def validate_id_categoria(self, value):
         """Integridad referencial: la categoría, si se indica, debe existir."""

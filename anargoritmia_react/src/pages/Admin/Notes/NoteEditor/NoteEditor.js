@@ -12,6 +12,7 @@ import { firmaAutor, firmaPropia } from "../../../../utils/notas";
 import { useAutoguardado } from "./useAutoguardado";
 import { Celda, FilaNueva, TIPOS } from "./Celda";
 import { DatosNota } from "./DatosNota";
+import { SelectorRuta } from "./SelectorRuta";
 import "./NoteEditor.css";
 
 function nuevoId() {
@@ -29,6 +30,8 @@ function nuevoBloque(tipo) {
     titulo: "",
     contenido: "",
     lenguaje: tipo === "animacion" ? "javascript" : "",
+    pista: "",
+    solucion: "",
     version: "",
     notas: "",
   };
@@ -72,6 +75,8 @@ export function NoteEditor() {
   const [porEliminar, setPorEliminar] = useState(null);
   // La nota cambió en otra pestaña o dispositivo (409): no se sigue guardando encima
   const [conflicto, setConflicto] = useState(false);
+  // Títulos de los prerrequisitos para mostrarlos en «Datos de la nota»
+  const [titulosRuta, setTitulosRuta] = useState({});
   // Correcciones abiertas por celda, para marcarlas en su cabecera
   const [correccionesPorCelda, setCorreccionesPorCelda] = useState({});
 
@@ -88,6 +93,7 @@ export function NoteEditor() {
   datosRef.current = {
     titulo: nota?.titulo ?? "",
     id_categoria: nota?.id_categoria ?? "",
+    prerrequisitos: nota?.prerrequisitos ?? [],
     bloques,
   };
 
@@ -160,6 +166,9 @@ export function NoteEditor() {
         const datos = await getNoteApi(id, token);
         if (cancelado) return;
         revisionRef.current = datos.revision ?? null;
+        setTitulosRuta(
+          Object.fromEntries((datos.ruta?.prerrequisitos || []).map((p) => [p.id_documento, p]))
+        );
         setNota(datos);
         setBloques(datos.bloques || []);
       } catch (error) {
@@ -197,8 +206,11 @@ export function NoteEditor() {
     editores.current[idBloque]?.focus({ preventScroll: true });
   }, []);
 
-  const verCorrecciones = useCallback(() => {
-    document.getElementById("correcciones")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  // Aviso «N correcciones» de una celda: el panel lleva a las correcciones de esa celda.
+  // `vez` cambia en cada clic para repetir el desplazamiento aunque sea la misma celda.
+  const [correccionEnfocada, setCorreccionEnfocada] = useState(null);
+  const verCorrecciones = useCallback((idBloque) => {
+    setCorreccionEnfocada((actual) => ({ idBloque, vez: (actual?.vez || 0) + 1 }));
   }, []);
 
   const registrarEditor = useCallback((idBloque, elemento) => {
@@ -441,6 +453,18 @@ export function NoteEditor() {
           autoria={autoria}
           esMia={esMia}
           onCambiar={cambiarMeta}
+          origen={nota.origen}
+          ruta={
+            <SelectorRuta
+              ids={nota.prerrequisitos || []}
+              titulos={titulosRuta}
+              idPropio={idRef.current}
+              onCambiar={(ids, titulos) => {
+                setTitulosRuta(titulos);
+                cambiarMeta({ prerrequisitos: ids });
+              }}
+            />
+          }
         >
           <PanelCorrecciones
             idNota={idRef.current}
@@ -449,6 +473,7 @@ export function NoteEditor() {
             onIrACelda={irACelda}
             onConteo={setCorreccionesPorCelda}
             mostrarAlCargar={hash === "#correcciones"}
+            enfocada={correccionEnfocada}
           />
         </DatosNota>
       </div>

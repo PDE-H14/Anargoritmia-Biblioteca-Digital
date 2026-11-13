@@ -32,6 +32,11 @@ export function deleteNoteApi(id, token) {
   return apiFetch(`/api/notas/${id}/`, { method: "DELETE", token });
 }
 
+// Crea un borrador propio basado en una nota publicada, con su atribución (CC BY-SA)
+export function derivarNotaApi(id, token) {
+  return apiFetch(`/api/notas/${id}/derivar/`, { method: "POST", token });
+}
+
 // --- Correcciones comunitarias ------------------------------------------------
 // El autor de la nota recibe todas; cualquier otra persona, solo las que propuso.
 export function getCorreccionesApi(idNota, token, { estado } = {}) {

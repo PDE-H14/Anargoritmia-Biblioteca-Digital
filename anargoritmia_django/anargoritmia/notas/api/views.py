@@ -50,13 +50,49 @@ def calcular_ficha(titulo, id_documento):
 
 def texto_publico(bloques):
     """
-    Texto plano de los bloques de texto públicos. Se guarda en `contenido`
+    Texto plano de las celdas de texto públicas y de los enunciados de los
+    ejercicios públicos (nunca sus soluciones). Se guarda en `contenido`
     para búsquedas y vistas previas (y para cumplir el validador de Atlas).
     """
     return "\n\n".join(
         b.get("contenido", "") for b in bloques
-        if b.get("tipo") == "texto" and b.get("publico")
+        if b.get("tipo") in ("texto", "ejercicio") and b.get("publico")
     )
+
+
+def ruta_de_estudio(nota):
+    """
+    Prerrequisitos de la nota (en el orden que eligió su autor) y notas
+    publicadas que la tienen como prerrequisito («para seguir»). Solo se
+    exponen notas publicadas, con su título y su firma.
+    """
+    proyeccion = {"_id": 0, "id_documento": 1, "titulo": 1, "autor": 1}
+    resumen = lambda n: {
+        "id_documento": n["id_documento"],
+        "titulo": n.get("titulo", ""),
+        "firma": (n.get("autor") or {}).get("firma") or (n.get("autor") or {}).get("alias", ""),
+    }
+    ids = nota.get("prerrequisitos") or []
+    encontradas = {
+        n["id_documento"]: n
+        for n in db["Nota"].find({"id_documento": {"$in": ids}, "es_borrador": False}, proyeccion)
+    }
+    siguen = db["Nota"].find(
+        {"prerrequisitos": nota["id_documento"], "es_borrador": False}, proyeccion
+    ).sort("fecha_publicacion", -1).limit(10)
+    return {
+        "prerrequisitos": [resumen(encontradas[i]) for i in ids if i in encontradas],
+        "siguen": [resumen(n) for n in siguen],
+    }
+
+
+def titulo_libre(titulo, id_autor):
+    """Título que el autor aún no usa: «X», «X (versión 2)», «X (versión 3)»..."""
+    candidato, n = titulo, 1
+    while db["Nota"].find_one({"autor.id_usuario": id_autor, "ficha": generar_ficha(candidato)}, {"_id": 1}):
+        n += 1
+        candidato = f"{titulo} (versión {n})"
+    return candidato
 
 
 def resumen_celdas(bloques):
@@ -217,6 +253,8 @@ class NotaViewSet(viewsets.GenericViewSet):
             if categoria:
                 nota["categoria"] = categoria
 
+        nota["ruta"] = ruta_de_estudio(nota)
+
         if editable and request.query_params.get('vista') != 'publica':
             nota.setdefault("celdas", resumen_celdas(nota.get("bloques", [])))
             return self.serializar(nota)
@@ -323,6 +361,54 @@ class NotaViewSet(viewsets.GenericViewSet):
         self.coleccion.delete_one({"id_documento": id_documento})
         db["Correccion"].delete_many({"id_documento": id_documento})
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # ------------------------------------------------------------------ #
+    # Versión derivada
+    # ------------------------------------------------------------------ #
+    @action(detail=True, methods=['post'])
+    def derivar(self, request, id_documento=None):
+        """
+        POST /api/notas/{id}/derivar/: crea un borrador propio a partir de
+        una nota publicada, con su atribución (`origen`), como permite y exige
+        la licencia CC BY-SA. De una nota ajena solo se copian las celdas
+        públicas; de una propia, todas.
+        """
+        nota = self.coleccion.find_one({"id_documento": id_documento}, {"_id": 0})
+        if not nota:
+            return error("El documento no existe.", status.HTTP_404_NOT_FOUND)
+        propia = puede_editar(nota, request.user)
+        if nota.get("es_borrador") and not propia:
+            return error("El documento no existe o se encuentra en estado de borrador.",
+                         status.HTTP_404_NOT_FOUND)
+
+        fuente = nota if propia else version_publica(nota)
+        id_nuevo = str(uuid.uuid4())
+        autor = autor_de(request.user)
+        datos = {
+            "id_documento": id_nuevo,
+            "titulo": titulo_libre(nota.get("titulo") or "Nota sin título", autor["id_usuario"]),
+            "id_categoria": nota.get("id_categoria", ""),
+            "etiquetas": list(nota.get("etiquetas", [])),
+            "prerrequisitos": list(nota.get("prerrequisitos", [])),
+            "bloques": [dict(b) for b in fuente.get("bloques", [])],
+            "licencia": LICENCIA,
+            "autor": autor,
+            "es_borrador": True,
+            "fecha_publicacion": None,
+            "revision": 1,
+            "origen": {
+                "id_documento": nota["id_documento"],
+                "titulo": nota.get("titulo", ""),
+                "firma": (nota.get("autor") or {}).get("firma") or (nota.get("autor") or {}).get("alias", ""),
+            },
+        }
+        self.completar_derivados(datos, id_nuevo)
+        try:
+            self.coleccion.insert_one(datos)
+        except DuplicateKeyError:
+            return error(MENSAJE_DUPLICADO)
+        datos.pop("_id", None)
+        return self.serializar(datos, status.HTTP_201_CREATED)
 
     # ------------------------------------------------------------------ #
     # Correcciones comunitarias

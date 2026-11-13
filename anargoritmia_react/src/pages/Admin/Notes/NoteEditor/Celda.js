@@ -7,6 +7,7 @@ export const TIPOS = {
   texto: "Texto",
   codigo: "Código",
   animacion: "Animación",
+  ejercicio: "Ejercicio",
 };
 
 const LENGUAJES = [
@@ -21,15 +22,19 @@ const EXTENSIONES = {
 };
 
 // Ejemplo que se muestra en una celda de animación vacía (Anime.js v4)
-const EJEMPLO_ANIMACION = `const punto = document.createElement("div");
+const EJEMPLO_ANIMACION = `// Deslizador para el lector: nombre, mínimo, máximo, inicial y paso
+const amplitud = parametro("amplitud (px)", 40, 280, 240, 10);
+
+const punto = document.createElement("div");
 punto.style.cssText = "width:40px;height:40px;border-radius:50%;background:var(--acc)";
 escena.append(punto);
 
-animate(punto, { x: 240, duration: 1200, alternate: true, loop: true });`;
+animate(punto, { x: amplitud, duration: 1200, alternate: true, loop: true });`;
 
 /** Nombre de archivo sugerido mientras la celda no tenga uno propio (según tipo y lenguaje). */
 export function nombreSugerido(bloque) {
   if (bloque.tipo === "animacion") return "animacion.js";
+  if (bloque.tipo === "ejercicio") return "ejercicio.md";
   if (bloque.tipo === "codigo") {
     const lenguaje = (bloque.lenguaje || "").toLowerCase().trim().split(/\s+/)[0];
     return `codigo.${EXTENSIONES[lenguaje] || "txt"}`;
@@ -55,7 +60,7 @@ export function Celda({
   onVerCorrecciones,
   registrarEditor,
 }) {
-  const { id, tipo, publico, contenido, lenguaje, version, notas, archivo = "", titulo = "" } = bloque;
+  const { id, tipo, publico, contenido, lenguaje, version, notas, archivo = "", titulo = "", pista = "", solucion = "" } = bloque;
   const sugerido = nombreSugerido(bloque);
   const cambiar = (campos) => onCambiar(id, campos);
   const siguiente = () => onSiguiente(id);
@@ -63,13 +68,16 @@ export function Celda({
   const campoTitulo = (
     <div className="campo">
       <label className="campo__etiqueta" htmlFor={`titulo-${id}`}>
-        {tipo === "codigo" ? "Título del algoritmo" : "Título de la animación"}
+        {{ codigo: "Título del algoritmo", animacion: "Título de la animación", ejercicio: "Título del ejercicio" }[tipo]}
       </label>
       <input
         id={`titulo-${id}`}
         className="campo__control"
         maxLength={200}
-        placeholder={tipo === "codigo" ? "p. ej. Método de Newton-Raphson" : "p. ej. Rotación de un polígono"}
+        placeholder={
+          { codigo: "p. ej. Método de Newton-Raphson", animacion: "p. ej. Rotación de un polígono" }[tipo] ||
+          "p. ej. Suma de Gauss"
+        }
         value={titulo}
         onChange={(e) => cambiar({ titulo: e.target.value })}
       />
@@ -235,6 +243,48 @@ export function Celda({
         </>
       )}
 
+      {tipo === "ejercicio" && (
+        <>
+          <div className="celda__campos">
+            <div className="celda__campo-ancho">{campoTitulo}</div>
+          </div>
+          <p className="celda__subtitulo">Enunciado</p>
+          <MarkdownDividido
+            id={id}
+            valor={contenido}
+            onCambio={(v) => cambiar({ contenido: v })}
+            etiqueta={`Enunciado del ejercicio de la celda ${indice + 1}`}
+            placeholder={"Lo que el lector debe resolver. Markdown y matemáticas:\nDemuestra que $\\sum_{k=1}^n k = \\frac{n(n+1)}{2}$."}
+            onSiguiente={siguiente}
+            registrar={(el) => registrarEditor(id, el)}
+          />
+          <div className="celda__pie">
+            <div className="campo">
+              <label className="campo__etiqueta" htmlFor={`pista-${id}`}>
+                Pista (opcional)
+              </label>
+              <textarea
+                id={`pista-${id}`}
+                className="campo__control"
+                rows={2}
+                placeholder="Una idea para empezar, sin resolverlo (Markdown)"
+                value={pista}
+                onChange={(e) => cambiar({ pista: e.target.value })}
+              />
+            </div>
+          </div>
+          <p className="celda__subtitulo">Solución</p>
+          <MarkdownDividido
+            id={`${id}-solucion`}
+            valor={solucion}
+            onCambio={(v) => cambiar({ solucion: v })}
+            etiqueta={`Solución del ejercicio de la celda ${indice + 1}`}
+            placeholder="La solución completa; el lector la abre cuando quiere, después de intentarlo."
+            onSiguiente={siguiente}
+          />
+        </>
+      )}
+
       {tipo === "animacion" && (
         <>
           <div className="celda__campos">
@@ -258,10 +308,38 @@ export function Celda({
               <code>stagger</code> y el resto de Anime.js, y los colores del tema en <code>var(--fg)</code>,{" "}
               <code>var(--acc)</code>, <code>var(--mut)</code>.
             </p>
+            <p className="celda__aviso">
+              <code>parametro("nombre", mín, máx, inicial, paso)</code> pone un deslizador bajo la escena y devuelve su
+              valor; cuando el lector lo mueve, la animación vuelve a empezar con el nuevo valor. Hasta 6 por celda.
+            </p>
           </div>
         </>
       )}
     </article>
+  );
+}
+
+/** Fuente Markdown con su vista en vivo al lado (celdas de texto y ejercicios). */
+function MarkdownDividido({ valor, onCambio, etiqueta, placeholder, onSiguiente, registrar }) {
+  return (
+    <div className="celda__dividido">
+      <PozoCodigo
+        ref={registrar}
+        valor={valor}
+        onCambio={onCambio}
+        etiqueta={etiqueta}
+        placeholder={placeholder}
+        onSiguiente={onSiguiente}
+      />
+      <div className="celda__vivo">
+        <p className="celda__vivo-etiqueta">Vista en vivo</p>
+        {valor.trim() ? (
+          <MarkdownView className="celda__lectura">{valor}</MarkdownView>
+        ) : (
+          <p className="celda__vivo-vacia">La vista aparece mientras escribes.</p>
+        )}
+      </div>
+    </div>
   );
 }
 

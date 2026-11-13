@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../hooks";
-import { getNoteApi } from "../../../api/note";
+import { derivarNotaApi, getNoteApi } from "../../../api/note";
 import { AnimacionAislada, DialogoCorreccion, MarkdownView, expresionDe, resaltar } from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
-import { LOGIN_PATH, editarNota } from "../../../utils/constants";
+import { LOGIN_PATH, editarNota, leerNota } from "../../../utils/constants";
 import { firmaAutor } from "../../../utils/notas";
 import "./NoteView.css";
 
-const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación" };
+const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
 
 /**
  * Lectura (diseño F): solo celdas públicas (el servidor filtra las privadas).
@@ -21,6 +21,8 @@ export function NoteView() {
   const { id } = useParams();
   const { auth } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [derivando, setDerivando] = useState(false);
   const [nota, setNota] = useState(null);
   const [error, setError] = useState(null);
   // Celda sobre la que se propone una corrección (null: diálogo cerrado)
@@ -57,12 +59,25 @@ export function NoteView() {
   const categoria = nota.categoria;
   // Las correcciones se proponen sobre notas publicadas y no las propone su autor
   const puedeCorregir = !!auth && !esAutor && !nota.es_borrador;
+  // Crea un borrador propio a partir de esta nota y abre el taller
+  const derivar = async () => {
+    setDerivando(true);
+    try {
+      const nueva = await derivarNotaApi(nota.id_documento, auth.token);
+      toast.success("Tu versión está en el taller como borrador, con la atribución a esta nota.");
+      navigate(editarNota(nueva.id_documento));
+    } catch (e) {
+      toast.error(e.message);
+      setDerivando(false);
+    }
+  };
   const fecha = nota.fecha_publicacion
     ? new Date(nota.fecha_publicacion).toLocaleDateString("es-MX", { dateStyle: "long" })
     : null;
 
   let algoritmos = 0;
   let animaciones = 0;
+  let ejercicios = 0;
 
   return (
     <article className="lectura">
@@ -90,6 +105,16 @@ export function NoteView() {
               Editar en el taller
             </Link>
           )}
+          {!nota.es_borrador &&
+            (auth ? (
+              <button type="button" className="lectura__derivar" disabled={derivando} onClick={derivar}>
+                {derivando ? "Creando tu versión…" : "Basar mi nota en esta"}
+              </button>
+            ) : (
+              <Link to={LOGIN_PATH} state={{ from: location }} className="lectura__derivar">
+                Basar mi nota en esta
+              </Link>
+            ))}
         </div>
         <div className="lectura__cuerpo">
           <h1 className="lectura__titulo">{nota.titulo || "Nota sin título"}</h1>
@@ -101,8 +126,19 @@ export function NoteView() {
               <a href="#nota-licencia">CC BY-SA 4.0</a>
             </span>
           </p>
+          {nota.origen && (
+            <p className="lectura__origen">
+              Basada en{" "}
+              <Link to={leerNota(nota.origen.id_documento)}>«{nota.origen.titulo || "Nota sin título"}»</Link> de{" "}
+              {nota.origen.firma || "autoría comunitaria"}.
+            </p>
+          )}
         </div>
       </header>
+
+      {nota.ruta?.prerrequisitos?.length > 0 && (
+        <ListaRuta titulo="Antes de leer esta nota" notas={nota.ruta.prerrequisitos} numerada />
+      )}
 
       {nota.bloques.length === 0 && (
         <div className="lectura__fila">
@@ -114,7 +150,12 @@ export function NoteView() {
       )}
 
       {nota.bloques.map((bloque, i) => {
-        const numero = bloque.tipo === "codigo" ? ++algoritmos : bloque.tipo === "animacion" ? ++animaciones : null;
+        const contadores = {
+          codigo: () => ++algoritmos,
+          animacion: () => ++animaciones,
+          ejercicio: () => ++ejercicios,
+        };
+        const numero = contadores[bloque.tipo]?.() ?? null;
         return (
           <FilaCelda
             key={bloque.id}
@@ -125,6 +166,8 @@ export function NoteView() {
           />
         );
       })}
+
+      {nota.ruta?.siguen?.length > 0 && <ListaRuta titulo="Para seguir" notas={nota.ruta.siguen} />}
 
       <footer className="lectura__fila lectura__notas">
         <div className="lectura__margen">
@@ -198,7 +241,32 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
       <div className="lectura__cuerpo">
         {tipo === "texto" && <MarkdownView className="lectura__texto">{contenido}</MarkdownView>}
 
-        {tipo !== "texto" && (
+        {tipo === "ejercicio" && (
+          <section className="lectura__ejercicio" aria-label={`Ejercicio ${numero}`}>
+            <p className="lectura__ejercicio-titulo">
+              <strong>Ejercicio {numero}.</strong>
+              {/* «Ejercicio 1» como título repetiría la numeración automática */}
+              {titulo &&
+                !/^ejercicio\s*\d*\s*\.?$/i.test(titulo.trim()) &&
+                ` ${titulo}${/[.!?]$/.test(titulo) ? "" : "."}`}
+            </p>
+            <MarkdownView className="lectura__texto">{contenido}</MarkdownView>
+            {bloque.pista?.trim() && (
+              <details className="lectura__plegable">
+                <summary>Ver una pista</summary>
+                <MarkdownView className="lectura__texto">{bloque.pista}</MarkdownView>
+              </details>
+            )}
+            {bloque.solucion?.trim() && (
+              <details className="lectura__plegable">
+                <summary>Ver la solución</summary>
+                <MarkdownView className="lectura__texto">{bloque.solucion}</MarkdownView>
+              </details>
+            )}
+          </section>
+        )}
+
+        {(tipo === "codigo" || tipo === "animacion") && (
           <figure className="lectura__algoritmo">
             <figcaption>
               <strong>
@@ -233,6 +301,28 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
 }
 
 /** Código con números de línea y, si se conoce el lenguaje, palabras reservadas en color (igual que en el taller). */
+/** Ruta de estudio: prerrequisitos (numerados) o notas que siguen a esta. */
+function ListaRuta({ titulo, notas, numerada = false }) {
+  const Lista = numerada ? "ol" : "ul";
+  return (
+    <nav className="lectura__fila lectura__ruta" aria-label={titulo}>
+      <div className="lectura__margen">
+        <p className="lectura__versalitas">{titulo}</p>
+      </div>
+      <div className="lectura__cuerpo">
+        <Lista className="lectura__ruta-lista">
+          {notas.map((n) => (
+            <li key={n.id_documento}>
+              <Link to={leerNota(n.id_documento)}>{n.titulo || "Nota sin título"}</Link>
+              <span className="lectura__tenue"> · {n.firma || "autoría comunitaria"}</span>
+            </li>
+          ))}
+        </Lista>
+      </div>
+    </nav>
+  );
+}
+
 function CodigoNumerado({ contenido, lenguaje }) {
   const expresion = expresionDe(lenguaje);
   return (

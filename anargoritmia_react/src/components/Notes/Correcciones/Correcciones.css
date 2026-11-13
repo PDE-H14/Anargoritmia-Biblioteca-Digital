@@ -106,6 +106,17 @@
   border-radius: var(--radio);
   background: var(--bg);
 }
+/* Al llegar desde el aviso de una celda */
+.correccion--resaltada {
+  box-shadow: 0 0 0 3px var(--warn);
+  transition: box-shadow 0.3s ease;
+}
+.correccion:focus {
+  outline: none;
+}
+.correccion:focus-visible {
+  box-shadow: var(--foco);
+}
 .correccion--atendida {
   border-left-color: var(--ok);
 }
