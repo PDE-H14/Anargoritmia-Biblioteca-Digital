@@ -1,0 +1,52 @@
+/* Escena de una celda de animación (lectura y taller) */
+.animacion {
+  display: grid;
+  gap: 10px;
+}
+.animacion__controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.animacion__estado {
+  color: var(--mut);
+  font-size: 0.9rem;
+}
+.animacion__marco,
+.animacion__portada {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radio);
+  background: var(--sur);
+}
+.animacion__portada {
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  padding: 16px;
+  text-align: center;
+  color: var(--soft);
+}
+.animacion__portada p {
+  margin: 0;
+}
+.animacion__nota {
+  color: var(--mut);
+  font-size: 0.9rem;
+}
+.animacion__error {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--acc);
+  background: var(--danger-bg);
+  color: var(--fg);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.animacion__vacia {
+  margin: 0;
+  color: var(--mut);
+}

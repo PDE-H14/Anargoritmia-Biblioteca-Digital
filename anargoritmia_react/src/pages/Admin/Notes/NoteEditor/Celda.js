@@ -1,6 +1,6 @@
 import React from "react";
 import { Icono } from "../../../../components/UI";
-import { MarkdownView } from "../../../../components/Notes";
+import { AnimacionAislada, MarkdownView } from "../../../../components/Notes";
 import { PozoCodigo } from "./PozoCodigo";
 
 export const TIPOS = {
@@ -11,14 +11,21 @@ export const TIPOS = {
 
 const LENGUAJES = [
   "python", "javascript", "typescript", "c", "cpp", "java", "julia", "r",
-  "octave", "haskell", "rust", "go", "sql", "bash", "latex",
+  "octave", "fortran", "haskell", "rust", "go", "sql", "bash", "latex",
 ];
 
 const EXTENSIONES = {
   python: "py", javascript: "js", typescript: "ts", c: "c", cpp: "cpp", "c++": "cpp",
   java: "java", julia: "jl", r: "r", octave: "m", matlab: "m", haskell: "hs",
-  rust: "rs", go: "go", sql: "sql", bash: "sh", latex: "tex",
+  rust: "rs", go: "go", sql: "sql", bash: "sh", latex: "tex", fortran: "f90",
 };
+
+// Ejemplo que se muestra en una celda de animación vacía (Anime.js v4)
+const EJEMPLO_ANIMACION = `const punto = document.createElement("div");
+punto.style.cssText = "width:40px;height:40px;border-radius:50%;background:var(--acc)";
+escena.append(punto);
+
+animate(punto, { x: 240, duration: 1200, alternate: true, loop: true });`;
 
 /** Nombre de archivo sugerido mientras la celda no tenga uno propio (según tipo y lenguaje). */
 export function nombreSugerido(bloque) {
@@ -240,10 +247,18 @@ export function Celda({
             lenguaje="javascript"
             sangrar
             etiqueta={`Código de animación de la celda ${indice + 1}`}
-            placeholder="anime({ targets: '#figura', translateX: 180 });"
+            placeholder={EJEMPLO_ANIMACION}
             onSiguiente={siguiente}
           />
-          <p className="celda__aviso">El código se guarda. Su ejecución en un entorno aislado llegará en una próxima versión.</p>
+          <div className="celda__prueba">
+            <p className="celda__vivo-etiqueta">Prueba</p>
+            <AnimacionAislada codigo={contenido} titulo={titulo || `Animación de la celda ${indice + 1}`} />
+            <p className="celda__aviso">
+              Dibuja dentro de <code>escena</code>. Tienes a mano <code>animate</code>, <code>createTimeline</code>,{" "}
+              <code>stagger</code> y el resto de Anime.js, y los colores del tema en <code>var(--fg)</code>,{" "}
+              <code>var(--acc)</code>, <code>var(--mut)</code>.
+            </p>
+          </div>
         </>
       )}
     </article>

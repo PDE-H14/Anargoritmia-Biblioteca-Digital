@@ -183,6 +183,10 @@
   padding-left: 3.6em;
   white-space: pre;
 }
+/* Palabras reservadas: mismo color que en el taller */
+.lectura__clave {
+  color: var(--code-kw);
+}
 .lectura__linea::before {
   content: attr(data-n);
   position: absolute;
@@ -267,4 +271,26 @@
     font-size: 1.2rem;
     text-align: left;
   }
+}
+
+/* Código de una animación: plegado bajo la escena */
+/* Escena y controles con el mismo margen interior que el título de la figura */
+.lectura__algoritmo > .animacion {
+  padding: 16px 18px 4px;
+}
+.lectura__fuente {
+  margin: 0;
+  padding: 4px 18px 12px;
+}
+/* El código desplegado conserva la alineación del resto de los bloques de código */
+.lectura__fuente .lectura__codigo {
+  margin: 0 -18px;
+}
+.lectura__fuente summary {
+  cursor: pointer;
+  color: var(--soft);
+  font-family: var(--f-ui);
+  min-height: var(--toque);
+  display: flex;
+  align-items: center;
 }

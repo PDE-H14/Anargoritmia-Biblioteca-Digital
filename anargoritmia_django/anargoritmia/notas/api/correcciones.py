@@ -159,8 +159,67 @@ def contar_abiertas(ids_documento):
     return {g["_id"]: g["n"] for g in grupos}
 
 
+class CorreccionModeracionSerializer(CorreccionSerializer):
+    """Corrección con los datos de su nota y su celda, para la vista de moderación."""
+    nota = serializers.DictField(read_only=True)
+    celda = serializers.DictField(read_only=True, allow_null=True)
+    abiertas_del_autor = serializers.IntegerField(read_only=True)
+
+
+def para_moderacion(correcciones):
+    """
+    Agrega a cada corrección su nota (título, ficha, autor, estado) y su celda
+    (posición y tipo; None si el autor ya la borró), más cuántas correcciones
+    abiertas tiene quien la propuso, para detectar abusos. Tres consultas en
+    total, sin importar cuántas correcciones haya.
+    """
+    ids_notas = list({c["id_documento"] for c in correcciones})
+    notas = {
+        n["id_documento"]: n
+        for n in db["Nota"].find(
+            {"id_documento": {"$in": ids_notas}},
+            {"_id": 0, "id_documento": 1, "titulo": 1, "ficha": 1, "autor": 1, "es_borrador": 1, "bloques": 1},
+        )
+    }
+    proponentes = list({c["autor"]["id_usuario"] for c in correcciones})
+    abiertas = {
+        g["_id"]: g["n"]
+        for g in db["Correccion"].aggregate([
+            {"$match": {"autor.id_usuario": {"$in": proponentes}, "estado": "abierta"}},
+            {"$group": {"_id": "$autor.id_usuario", "n": {"$sum": 1}}},
+        ])
+    }
+    resultado = []
+    for c in correcciones:
+        nota = notas.get(c["id_documento"]) or {}
+        bloques = nota.get("bloques", [])
+        indice = next((i for i, b in enumerate(bloques) if b.get("id") == c["id_bloque"]), None)
+        autor_nota = nota.get("autor") or {}
+        resultado.append({
+            **c,
+            "nota": {
+                "id_documento": c["id_documento"],
+                "titulo": nota.get("titulo", ""),
+                "ficha": nota.get("ficha", ""),
+                "firma_autor": autor_nota.get("firma") or autor_nota.get("alias", ""),
+                "es_borrador": nota.get("es_borrador", True),
+                "existe": bool(nota),
+            },
+            "celda": None if indice is None else {
+                "indice": indice,
+                "tipo": bloques[indice].get("tipo"),
+                "titulo": bloques[indice].get("titulo") or bloques[indice].get("archivo") or "",
+            },
+            "abiertas_del_autor": abiertas.get(c["autor"]["id_usuario"], 0),
+        })
+    return resultado
+
+
 class CorreccionViewSet(viewsets.GenericViewSet):
     """
+    GET    /api/correcciones/[?estado=abierta&tipo_error=...]: moderación, solo
+           staff. Todas las correcciones del sitio, abiertas primero y de la
+           más antigua a la más reciente, con su nota y su celda.
     PATCH  /api/correcciones/{id}/: el autor de la nota (o staff) la marca como
            atendida o descartada, con una respuesta opcional; o la reabre.
     DELETE /api/correcciones/{id}/: quien la propuso la retira mientras siga abierta
@@ -176,6 +235,26 @@ class CorreccionViewSet(viewsets.GenericViewSet):
             return None, None
         nota = db["Nota"].find_one({"id_documento": correccion["id_documento"]}, {"autor": 1, "_id": 0})
         return correccion, nota
+
+    LIMITE_MODERACION = 500
+
+    def list(self, request):
+        if not request.user.is_staff:
+            return error("Solo la administración modera las correcciones.", status.HTTP_403_FORBIDDEN)
+        consulta = {}
+        estado = request.query_params.get("estado")
+        if estado in ESTADOS:
+            consulta["estado"] = estado
+        tipo = request.query_params.get("tipo_error")
+        if tipo in TIPOS_ERROR:
+            consulta["tipo_error"] = tipo
+        correcciones = list(
+            db["Correccion"].find(consulta, {"_id": 0}).sort("fecha_creacion", 1).limit(self.LIMITE_MODERACION)
+        )
+        # Abiertas primero (las que esperan a alguien), luego atendidas y descartadas
+        orden = {estado: i for i, estado in enumerate(ESTADOS)}
+        correcciones.sort(key=lambda c: orden.get(c.get("estado"), 9))
+        return Response(CorreccionModeracionSerializer(para_moderacion(correcciones), many=True).data)
 
     def partial_update(self, request, id_correccion=None):
         correccion, nota = self.obtener(id_correccion)

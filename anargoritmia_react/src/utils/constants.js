@@ -15,6 +15,7 @@ export const RUTAS = {
   MIS_DATOS: "/lab/mis-datos",
   USUARIOS: "/admin/usuarios",
   CATEGORIAS: "/admin/categorias",
+  CORRECCIONES: "/admin/correcciones",
 };
 
 // Editor y lectura de notas. "nueva" crea un borrador al primer autoguardado.

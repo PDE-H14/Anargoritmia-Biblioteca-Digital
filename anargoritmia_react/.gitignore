@@ -11,6 +11,9 @@
 # production
 /build
 
+# copias de bibliotecas para el entorno aislado (scripts/copiar-vendor.js)
+/public/vendor
+
 # misc
 .DS_Store
 .env

@@ -222,6 +222,41 @@
   text-underline-offset: 3px;
 }
 
+/* ---- Buscador del catálogo ---- */
+.catalogo__buscador {
+  position: relative;
+  margin-bottom: 8px;
+}
+.catalogo__buscador input {
+  padding-right: 92px;
+  font-size: 1.05rem;
+}
+.catalogo__buscador input::-webkit-search-cancel-button {
+  display: none; /* el botón «Limpiar» cumple esa función */
+}
+.catalogo__limpiar {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  background: none;
+  color: var(--soft);
+  font: inherit;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.catalogo__resumen {
+  min-height: 1.4em;
+  margin: 0 0 12px !important;
+  color: var(--mut);
+  font-size: 0.95rem;
+}
+
 /* ---- Pantallas medianas y móvil ---- */
 @media (max-width: 1100px) {
   .portada__principios ol {

@@ -462,3 +462,115 @@ class CorreccionesTests(MongoAPITestCase):
         autor = self.db["Correccion"].find_one({})["autor"]
         self.assertEqual(autor["firma"], "Comunidad Anargoritmia")
         self.assertEqual(autor["correo"], "")
+
+
+class BusquedaTests(MongoAPITestCase):
+    """?q= en el catálogo: título, texto público, etiquetas y firma; sin acentos ni mayúsculas."""
+
+    def setUp(self):
+        super().setUp()
+        self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
+        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
+        self.client.force_authenticate(self.autora)
+        self.publicar("Teorema de Pitágoras", "En un triángulo rectángulo...", etiquetas=["geometría"])
+        self.publicar("Método de Newton", "Aproxima raíces de funciones.", privado="secreto escondido")
+        self.client.post(URL, {"titulo": "Borrador de Álgebra lineal"}, format="json")
+        self.client.force_authenticate(None)
+
+    def publicar(self, titulo, texto, etiquetas=(), privado=None):
+        bloques = [bloque("b1", contenido=texto)]
+        if privado:
+            bloques.append(bloque("b2", publico=False, contenido=privado))
+        r = self.client.post(URL, {"titulo": titulo, "id_categoria": "cat-1", "es_borrador": False,
+                                   "etiquetas": list(etiquetas), "bloques": bloques}, format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+
+    def titulos(self, q):
+        return [n["titulo"] for n in self.client.get(URL, {"q": q}).data]
+
+    def test_busca_en_titulo_sin_acentos_ni_mayusculas(self):
+        self.assertEqual(self.titulos("pitagoras"), ["Teorema de Pitágoras"])
+        self.assertEqual(self.titulos("METODO"), ["Método de Newton"])
+
+    def test_busca_en_texto_publico_y_etiquetas(self):
+        self.assertEqual(self.titulos("raices"), ["Método de Newton"])
+        self.assertEqual(self.titulos("geometria"), ["Teorema de Pitágoras"])
+
+    def test_todas_las_palabras_deben_aparecer(self):
+        self.assertEqual(self.titulos("teorema triangulo"), ["Teorema de Pitágoras"])
+        self.assertEqual(self.titulos("teorema newton"), [])
+
+    def test_no_encuentra_celdas_privadas_ni_borradores(self):
+        self.assertEqual(self.titulos("escondido"), [])
+        self.assertEqual(self.titulos("lineal"), [])
+
+    def test_caracteres_especiales_no_rompen_la_consulta(self):
+        self.assertEqual(self.client.get(URL, {"q": "(.*[ \\"}).status_code, 200)
+
+    def test_consulta_vacia_devuelve_todo(self):
+        self.assertEqual(len(self.client.get(URL, {"q": "   "}).data), 2)
+
+
+class ModeracionTests(MongoAPITestCase):
+    """GET /api/correcciones/: vista general de correcciones, solo para staff."""
+
+    DESCRIPCION = "La derivada está mal: la de x al cuadrado es 2x y no x."
+
+    def setUp(self):
+        super().setUp()
+        self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
+        self.autora = Usuario.objects.create_user(username="ada", email="ada@example.com", password="x")
+        self.lector = Usuario.objects.create_user(username="lee", email="lee@example.com", password="x")
+        self.admin = Usuario.objects.create_user(username="admin", email="admin@example.com", password="x",
+                                                 is_staff=True)
+        self.client.force_authenticate(self.autora)
+        self.nota = self.client.post(URL, {
+            "titulo": "Newton", "id_categoria": "cat-1", "es_borrador": False,
+            "bloques": [bloque("t1"), bloque("c1", tipo="codigo", contenido="x = 1", titulo="Iteración")],
+        }, format="json").data
+        self.client.force_authenticate(self.lector)
+        base = f"{URL}{self.nota['id_documento']}/correcciones/"
+        self.c1 = self.client.post(base, {"id_bloque": "t1", "tipo_error": "matematico",
+                                          "descripcion": self.DESCRIPCION}, format="json").data
+        self.c2 = self.client.post(base, {"id_bloque": "c1", "tipo_error": "codigo",
+                                          "descripcion": self.DESCRIPCION}, format="json").data
+
+    def test_solo_staff(self):
+        self.assertEqual(self.client.get("/api/correcciones/").status_code, 403)
+        self.client.force_authenticate(self.autora)
+        self.assertEqual(self.client.get("/api/correcciones/").status_code, 403)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get("/api/correcciones/").status_code, 401)
+
+    def test_lista_con_nota_celda_y_actividad_del_proponente(self):
+        self.client.force_authenticate(self.admin)
+        lista = self.client.get("/api/correcciones/").data
+        self.assertEqual(len(lista), 2)
+        primera = lista[0]
+        self.assertEqual(primera["nota"]["titulo"], "Newton")
+        self.assertEqual(primera["celda"]["indice"], 0)
+        self.assertEqual(primera["abiertas_del_autor"], 2)
+        codigo = next(c for c in lista if c["id_bloque"] == "c1")
+        self.assertEqual(codigo["celda"]["titulo"], "Iteración")
+
+    def test_abiertas_primero_y_filtros(self):
+        self.client.force_authenticate(self.admin)
+        self.client.patch(f"/api/correcciones/{self.c1['id_correccion']}/", {"estado": "descartada"}, format="json")
+        lista = self.client.get("/api/correcciones/").data
+        self.assertEqual([c["estado"] for c in lista], ["abierta", "descartada"])
+        self.assertEqual(len(self.client.get("/api/correcciones/", {"estado": "abierta"}).data), 1)
+        self.assertEqual(len(self.client.get("/api/correcciones/", {"tipo_error": "codigo"}).data), 1)
+
+    def test_celda_borrada_se_indica(self):
+        self.client.force_authenticate(self.autora)
+        self.client.patch(f"{URL}{self.nota['id_documento']}/", {"bloques": [bloque("t1")]}, format="json")
+        self.client.force_authenticate(self.admin)
+        codigo = next(c for c in self.client.get("/api/correcciones/").data if c["id_bloque"] == "c1")
+        self.assertIsNone(codigo["celda"])
+
+    def test_staff_atiende_y_retira(self):
+        self.client.force_authenticate(self.admin)
+        r = self.client.patch(f"/api/correcciones/{self.c1['id_correccion']}/",
+                              {"estado": "atendida", "respuesta": "Revisado por la administración."}, format="json")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.client.delete(f"/api/correcciones/{self.c2['id_correccion']}/").status_code, 204)

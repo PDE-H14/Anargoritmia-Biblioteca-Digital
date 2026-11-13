@@ -267,6 +267,22 @@
   color: var(--soft);
 }
 
+/* Prueba de una celda de animación, bajo su código */
+.celda__prueba {
+  display: grid;
+  gap: 8px;
+  padding: 16px 20px 0;
+  border-top: 1px solid var(--line);
+}
+.celda__prueba .celda__aviso {
+  padding: 0 0 14px;
+  font-size: 0.93rem;
+}
+.celda__prueba code {
+  font-family: var(--f-mono);
+  font-size: 0.9em;
+}
+
 /* ---- Pozo de código con números de línea ---- */
 .pozo {
   position: relative;

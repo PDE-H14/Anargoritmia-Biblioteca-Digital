@@ -1,0 +1,58 @@
+.moderacion {
+  display: grid;
+  gap: 18px;
+  padding: 32px 40px 60px;
+  max-width: 980px;
+}
+.moderacion__intro {
+  margin: 0 !important;
+  color: var(--soft);
+  line-height: 1.5;
+}
+.moderacion__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.moderacion__cuenta {
+  font-family: var(--f-mono);
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+.moderacion__tipo .campo__control {
+  min-width: 240px;
+}
+.moderacion__nota {
+  font-weight: 700;
+}
+.moderacion__nota a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.moderacion__detalle {
+  color: var(--mut);
+  font-weight: 400;
+}
+/* Corrección abierta hace una semana o más */
+.moderacion__vieja {
+  color: var(--warn);
+  font-weight: 700;
+}
+/* Quien la propuso tiene muchas abiertas: revisar si abusa del mecanismo */
+.moderacion__alerta {
+  color: var(--acc);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .moderacion {
+    padding: 20px 16px 40px;
+  }
+  .moderacion__tipo,
+  .moderacion__tipo .campo__control {
+    width: 100%;
+    min-width: 0;
+  }
+}

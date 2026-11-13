@@ -39,6 +39,11 @@ export function Portada() {
   const [categorias, setCategorias] = useState(null);
   const [notas, setNotas] = useState(null);
   const [error, setError] = useState(null);
+  // Búsqueda: el texto vive en la URL (?q=) para poder compartir el enlace
+  const consulta = parametros.get("q") || "";
+  const [texto, setTexto] = useState(consulta);
+  const [resultados, setResultados] = useState(null);
+  const [buscando, setBuscando] = useState(false);
 
   const cargar = useCallback(() => {
     setError(null);
@@ -59,17 +64,50 @@ export function Portada() {
   const fichaElegida = parametros.get("categoria");
   const elegida = categorias?.find((c) => c.ficha === fichaElegida) || null;
 
-  const notasVisibles = useMemo(() => {
-    if (!notas) return [];
-    return elegida ? notas.filter((n) => n.id_categoria === elegida.id_categoria) : notas;
-  }, [notas, elegida]);
+  const cambiarParametro = useCallback(
+    (nombre, valor) => {
+      setParametros(
+        (actuales) => {
+          const siguientes = new URLSearchParams(actuales);
+          if (valor) siguientes.set(nombre, valor);
+          else siguientes.delete(nombre);
+          return siguientes;
+        },
+        { replace: true, preventScrollReset: true }
+      );
+    },
+    [setParametros]
+  );
 
-  const elegir = (ficha) => {
-    const siguientes = new URLSearchParams(parametros);
-    if (ficha) siguientes.set("categoria", ficha);
-    else siguientes.delete("categoria");
-    setParametros(siguientes, { replace: true, preventScrollReset: true });
-  };
+  // Escribir actualiza la URL tras una pausa breve; la URL dispara la búsqueda
+  useEffect(() => {
+    const temporizador = setTimeout(() => cambiarParametro("q", texto.trim()), 300);
+    return () => clearTimeout(temporizador);
+  }, [texto, cambiarParametro]);
+
+  useEffect(() => {
+    if (!consulta) {
+      setResultados(null);
+      return undefined;
+    }
+    let vigente = true;
+    setBuscando(true);
+    getPublicNotesApi({ q: consulta })
+      .then((lista) => vigente && setResultados(lista || []))
+      .catch((e) => vigente && setError(e.message))
+      .finally(() => vigente && setBuscando(false));
+    return () => {
+      vigente = false;
+    };
+  }, [consulta]);
+
+  const notasVisibles = useMemo(() => {
+    const base = consulta ? resultados : notas;
+    if (!base) return [];
+    return elegida ? base.filter((n) => n.id_categoria === elegida.id_categoria) : base;
+  }, [notas, resultados, consulta, elegida]);
+
+  const elegir = (ficha) => cambiarParametro("categoria", ficha);
 
   return (
     <div className="portada">
@@ -153,9 +191,38 @@ export function Portada() {
               </ul>
             </nav>
 
-            <div className="catalogo__notas" aria-live="polite">
+            <div className="catalogo__notas">
+              <form className="catalogo__buscador" role="search" onSubmit={(e) => e.preventDefault()}>
+                <label htmlFor="catalogo-busqueda" className="solo-lectores">
+                  Buscar en el catálogo
+                </label>
+                <input
+                  id="catalogo-busqueda"
+                  type="search"
+                  className="campo__control"
+                  placeholder="Buscar por título, tema, etiqueta o autor"
+                  value={texto}
+                  maxLength={100}
+                  onChange={(e) => setTexto(e.target.value)}
+                />
+                {texto && (
+                  <button type="button" className="catalogo__limpiar" onClick={() => setTexto("")}>
+                    Limpiar
+                  </button>
+                )}
+              </form>
+              <p className="catalogo__resumen" aria-live="polite">
+                {consulta &&
+                  (buscando
+                    ? "Buscando…"
+                    : `${notasVisibles.length} ${notasVisibles.length === 1 ? "nota coincide" : "notas coinciden"} con «${consulta}»${elegida ? ` en «${elegida.nombre}»` : ""}.`)}
+              </p>
               {elegida?.descripcion && <p className="catalogo__descripcion">{elegida.descripcion}</p>}
-              {notasVisibles.length === 0 ? (
+              {consulta && !buscando && notasVisibles.length === 0 ? (
+                <p className="catalogo__vacio">
+                  Ninguna nota publicada coincide. Prueba con menos palabras o con otra categoría.
+                </p>
+              ) : consulta && buscando ? null : notasVisibles.length === 0 ? (
                 <p className="catalogo__vacio">
                   {elegida ? `Aún no hay notas publicadas en «${elegida.nombre}».` : "Aún no hay notas publicadas."}{" "}
                   <Link to={RUTAS.CREAR}>Escribe la primera en el taller</Link>.

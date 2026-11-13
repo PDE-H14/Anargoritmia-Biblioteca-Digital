@@ -14,6 +14,7 @@ const ENTRADAS = [
   // Creación queda activa también al editar una nota existente (/lab/notas/:id)
   { a: RUTAS.CREAR, texto: "Creación", icono: "lapiz", activa: (p) => p.startsWith("/lab/notas/") },
   { a: RUTAS.USUARIOS, texto: "Usuarios", icono: "usuarios", soloStaff: true, activa: (p) => p === RUTAS.USUARIOS },
+  { a: RUTAS.CORRECCIONES, texto: "Correcciones", icono: "advertencia", soloStaff: true, activa: (p) => p === RUTAS.CORRECCIONES },
   { a: RUTAS.MIS_DATOS, texto: "Mis datos", icono: "ficha", activa: (p) => p === RUTAS.MIS_DATOS },
 ];
 

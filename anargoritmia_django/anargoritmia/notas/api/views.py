@@ -7,6 +7,7 @@ from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from db import db
 from notas.servicios import autor_de
+from notas.busqueda import filtro_busqueda
 from .serializers import NotaSerializer, NotaResumenSerializer, generar_ficha
 from .correcciones import (
     CorreccionSerializer, LimiteCorrecciones, contar_abiertas, crear_correccion, listar_correcciones,
@@ -154,12 +155,16 @@ class NotaViewSet(viewsets.GenericViewSet):
         """
         Catálogo público: notas publicadas, en versión ligera (sin el contenido
         de las celdas), de la más reciente a la más antigua.
-        Filtros opcionales: ?categoria=<id_categoria>, ?limite=<n> (máx. 500).
+        Filtros opcionales: ?categoria=<id_categoria>, ?limite=<n> (máx. 500)
+        y ?q=<palabras> (ver notas/busqueda.py).
         """
         query = {"es_borrador": False}
         id_categoria = request.query_params.get('categoria')
         if id_categoria:
             query["id_categoria"] = id_categoria
+        busqueda = filtro_busqueda(request.query_params.get('q'))
+        if busqueda:
+            query.update(busqueda)
 
         notas = list(
             self.coleccion.find(query, PROYECCION_RESUMEN)

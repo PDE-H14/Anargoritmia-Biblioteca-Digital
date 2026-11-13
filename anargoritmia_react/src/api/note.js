@@ -1,8 +1,13 @@
 import { apiFetch } from "./http";
 
-// Notas publicadas en versión ligera (sin el contenido de las celdas), más recientes primero
-export function getPublicNotesApi({ limite } = {}) {
-  return apiFetch(`/api/notas/${limite ? `?limite=${limite}` : ""}`);
+// Notas publicadas en versión ligera (sin el contenido de las celdas), más recientes primero.
+// q: palabras a buscar en título, texto público, etiquetas y firma (sin acentos ni mayúsculas).
+export function getPublicNotesApi({ limite, q } = {}) {
+  const parametros = new URLSearchParams();
+  if (limite) parametros.set("limite", limite);
+  if (q?.trim()) parametros.set("q", q.trim());
+  const consulta = parametros.toString();
+  return apiFetch(`/api/notas/${consulta ? `?${consulta}` : ""}`);
 }
 
 export function getMyNotesApi(token) {
@@ -40,6 +45,15 @@ export function createCorreccionApi(idNota, data, token) {
 // estado: "atendida" | "descartada" | "abierta" (reabrir), con respuesta opcional
 export function resolverCorreccionApi(idCorreccion, data, token) {
   return apiFetch(`/api/correcciones/${idCorreccion}/`, { method: "PATCH", token, json: data });
+}
+
+// Moderación (solo administradores): todas las correcciones del sitio, con su nota y su celda
+export function getModeracionApi(token, { estado, tipoError } = {}) {
+  const parametros = new URLSearchParams();
+  if (estado) parametros.set("estado", estado);
+  if (tipoError) parametros.set("tipo_error", tipoError);
+  const consulta = parametros.toString();
+  return apiFetch(`/api/correcciones/${consulta ? `?${consulta}` : ""}`, { token });
 }
 
 export function retirarCorreccionApi(idCorreccion, token) {

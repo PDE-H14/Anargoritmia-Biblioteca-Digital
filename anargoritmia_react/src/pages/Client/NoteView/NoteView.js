@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 
 import { useAuth } from "../../../hooks";
 import { getNoteApi } from "../../../api/note";
-import { DialogoCorreccion, MarkdownView } from "../../../components/Notes";
+import { AnimacionAislada, DialogoCorreccion, MarkdownView, expresionDe, resaltar } from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
 import { LOGIN_PATH, editarNota } from "../../../utils/constants";
 import { firmaAutor } from "../../../utils/notas";
@@ -207,16 +207,17 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
               {titulo && ` ${titulo}${/[.!?]$/.test(titulo) ? "" : "."}`}
               {tipo === "codigo" && lenguaje && ` En ${lenguaje}.`}
             </figcaption>
-            <pre className="lectura__codigo">
-              <code>
-                {contenido.split("\n").map((linea, n) => (
-                  <span key={n} className="lectura__linea" data-n={n + 1}>
-                    {linea}
-                    {"\n"}
-                  </span>
-                ))}
-              </code>
-            </pre>
+            {tipo === "animacion" ? (
+              <>
+                <AnimacionAislada codigo={contenido} titulo={titulo || `Animación ${numero}`} />
+                <details className="lectura__fuente">
+                  <summary>Ver el código</summary>
+                  <CodigoNumerado contenido={contenido} lenguaje="javascript" />
+                </details>
+              </>
+            ) : (
+              <CodigoNumerado contenido={contenido} lenguaje={lenguaje} />
+            )}
           </figure>
         )}
 
@@ -226,14 +227,25 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
           </div>
         )}
 
-        {tipo === "animacion" && (
-          <p className="lectura__replicacion">
-            <em>Animación.</em> Su ejecución en un entorno aislado llegará en una próxima versión; por ahora se muestra el
-            código.
-          </p>
-        )}
       </div>
     </section>
+  );
+}
+
+/** Código con números de línea y, si se conoce el lenguaje, palabras reservadas en color (igual que en el taller). */
+function CodigoNumerado({ contenido, lenguaje }) {
+  const expresion = expresionDe(lenguaje);
+  return (
+    <pre className="lectura__codigo">
+      <code>
+        {contenido.split("\n").map((linea, n) => (
+          <span key={n} className="lectura__linea" data-n={n + 1}>
+            {resaltar(linea, expresion, "lectura__clave")}
+            {"\n"}
+          </span>
+        ))}
+      </code>
+    </pre>
   );
 }
 
