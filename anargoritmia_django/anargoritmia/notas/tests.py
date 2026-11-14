@@ -846,3 +846,45 @@ class CiclosFigurasYAtribucionTests(MongoAPITestCase):
         self.client.patch(f"{URL}{original['id_documento']}/", {"es_borrador": True}, format="json")
         self.client.force_authenticate(None)
         self.assertFalse(self.client.get(f"{URL}{derivada['id_documento']}/").data["origen"]["disponible"])
+
+
+
+class GrafoTests(MongoAPITestCase):
+    """GET /api/notas/grafo/: mapa público de notas publicadas y sus enlaces."""
+
+    def setUp(self):
+        super().setUp()
+        self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x")
+        self.client.force_authenticate(self.autora)
+
+    def publicar(self, titulo, **extra):
+        r = self.client.post(URL, {"titulo": titulo, "id_categoria": "cat-1", "es_borrador": False,
+                                   "bloques": [bloque("b1")], **extra}, format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+        return r.data
+
+    def test_grafo_publico_con_prerrequisitos_y_origen(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        derivada = self.client.post(f"{URL}{b['id_documento']}/derivar/", format="json").data
+        self.client.patch(f"{URL}{derivada['id_documento']}/", {"es_borrador": False}, format="json")
+        self.client.post(URL, {"titulo": "Borrador"}, format="json")
+        self.client.force_authenticate(None)
+        r = self.client.get(f"{URL}grafo/")
+        self.assertEqual(r.status_code, 200)
+        notas = {n["titulo"]: n for n in r.data["notas"]}
+        self.assertEqual(set(notas), {"Límites", "Derivadas", "Derivadas (versión 2)"})
+        self.assertEqual(notas["Derivadas"]["prerrequisitos"], [a["id_documento"]])
+        self.assertEqual(notas["Derivadas (versión 2)"]["origen"], b["id_documento"])
+        self.assertNotIn("bloques", notas["Límites"])
+
+    def test_aristas_hacia_borradores_no_salen(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        self.client.patch(f"{URL}{a['id_documento']}/", {"es_borrador": True}, format="json")
+        r = self.client.get(f"{URL}grafo/")
+        notas = {n["titulo"]: n for n in r.data["notas"]}
+        self.assertEqual(notas["Derivadas"]["prerrequisitos"], [])
+        self.assertNotIn("Límites", notas)
+        self.assertTrue(b)

@@ -64,3 +64,8 @@ export function getModeracionApi(token, { estado, tipoError } = {}) {
 export function retirarCorreccionApi(idCorreccion, token) {
   return apiFetch(`/api/correcciones/${idCorreccion}/`, { method: "DELETE", token });
 }
+
+// Mapa del procomún: notas publicadas con prerrequisitos y nota de origen (sin contenido)
+export function getGrafoApi() {
+  return apiFetch("/api/notas/grafo/");
+}

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import "./AdminLayout.css";
 import { MenuLateral } from "../../components/App";
+import { BandaAvisos } from "../../components/Common";
 import { useAuth } from "../../hooks";
 import { LOGIN_PATH, RUTAS } from "../../utils/constants";
 
@@ -49,6 +50,7 @@ export function AdminLayout({ children, staffOnly }) {
     <div className="app-layout">
       <MenuLateral contraido={contraido} onAlternar={alternarMenu} />
       <main className="app-layout__contenido" id="contenido">
+        <BandaAvisos lugar="taller" />
         {children}
       </main>
     </div>

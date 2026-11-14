@@ -323,6 +323,7 @@ def inicializar_indices():
 
         # Portadas en WebP (categorias/imagenes.py)
         db['Imagen'].create_index("id_imagen", unique=True)
+        db['Aviso'].create_index("id_aviso", unique=True)                                  # avisos de la administración
 
         # Cuentas y sesiones: los mismos que usuarios.repositorio.asegurar_indices()
         db['Usuario'].create_index("id_usuario", unique=True)

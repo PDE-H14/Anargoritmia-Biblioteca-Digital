@@ -43,6 +43,7 @@ urlpatterns = [
     path("api/", include("usuarios.api.router")),
     path("api/", include("notas.api.router")),
     path("api/", include("categorias.api.router")),
+    path("api/", include("avisos.api.router")),
     path("api/diagnostico/ip/", DiagnosticoIPView.as_view()),
 ]
 

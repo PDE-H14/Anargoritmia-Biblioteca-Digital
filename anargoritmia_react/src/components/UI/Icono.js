@@ -38,6 +38,8 @@ const TRAZOS = {
   mas: <path d="M12 5v14M5 12h14" />,
   // Estante con tres lomos: el catálogo público
   catalogo: <path d="M4 4h3.5v16H4zM9.5 4H13v16H9.5zM15 5.2l3.3-.9 3.2 15.2-3.3.9zM3 20.5h18" />,
+  megafono: <path d="M4 10v4h3l7 4V6L7 10zM17 9.5a3.5 3.5 0 0 1 0 5M7 14l1.5 5h2.5l-1.3-4.3" />,
+  mapa: <path d="M6 7a2 2 0 1 0 0-.01M18 5a2 2 0 1 0 0-.01M12 13a2 2 0 1 0 0-.01M7 19a2 2 0 1 0 0-.01M19 18a2 2 0 1 0 0-.01M7.6 8.2l3 3.4M16.5 6.3l-3.2 5.2M11 14.6l-2.8 2.9M13.7 14l3.8 2.9" />,
   guardar: <path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 4v5h7V4M8 20v-6h8v6" />,
   arriba: <path d="M12 19V5M6 11l6-6 6 6" />,
   abajo: <path d="M12 5v14M6 13l6 6 6-6" />,

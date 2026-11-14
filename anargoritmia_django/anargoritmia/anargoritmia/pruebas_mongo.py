@@ -23,6 +23,7 @@ MODULOS_CON_DB = [
     "usuarios.repositorio",
     "usuarios.sesiones",
     "usuarios.management.commands.migrar_usuarios_sqlite",
+    "avisos.api.views",
 ]
 
 

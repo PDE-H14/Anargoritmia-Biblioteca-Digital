@@ -371,3 +371,126 @@
   display: flex;
   align-items: center;
 }
+
+/* ---- Imprimir o guardar como PDF ---- */
+.lectura__imprimir {
+  margin-top: 6px;
+}
+.lectura__casilla {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--soft);
+  font: 400 0.9rem/1.3 var(--f-ui);
+  cursor: pointer;
+}
+.lectura__casilla input {
+  accent-color: var(--fg);
+}
+.lectura__solo-impresion {
+  display: none !important;
+}
+
+@media print {
+  @page {
+    margin: 2cm 2.2cm;
+  }
+  /* En papel, siempre los colores del modo claro */
+  html,
+  html[data-theme] {
+    --bg: #ffffff;
+    --fg: #141210;
+    --soft: #3a3d45;
+    --mut: #5b616e;
+    --sur: #ffffff;
+    --line: #e3e5e8;
+    --line-strong: #8b919c;
+    --acc: #c8102e;
+    --margin: #b4322b;
+    --code-bg: #f5f6f7;
+    --code-fg: #141210;
+    --code-num: #5b616e;
+    --code-kw: #9a3412;
+    --lectura-codigo: #ffffff;
+  }
+  body {
+    background: #ffffff !important;
+    color: #141210 !important;
+  }
+  /* Solo la nota: sin cabecera, pie, avisos ni controles */
+  .publico__cabecera,
+  .publico__pie,
+  .publico__saltar,
+  .Toastify,
+  .lectura__fila--aviso,
+  .lectura__margen,
+  .lectura__ruta,
+  .lectura__mapa,
+  .lectura button,
+  .animacion,
+  .lectura__fuente {
+    display: none !important;
+  }
+  .lectura__solo-impresion {
+    display: block !important;
+  }
+  summary .lectura__solo-impresion {
+    display: inline !important;
+  }
+  .lectura__en-pantalla {
+    display: none !important;
+  }
+  .lectura--sin-soluciones .lectura__plegable--solucion {
+    display: none !important;
+  }
+  .lectura {
+    max-width: none;
+    padding: 0;
+    font-size: 11pt;
+  }
+  .lectura__fila {
+    display: block;
+  }
+  .lectura__cuerpo {
+    padding: 0 0 14pt;
+    border-left: 0;
+  }
+  .lectura__titulo {
+    font-size: 22pt;
+  }
+  .lectura a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .lectura summary {
+    list-style: none;
+    font-weight: 700;
+  }
+  .lectura summary::-webkit-details-marker {
+    display: none;
+  }
+  .lectura__codigo {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .lectura__aviso-impreso {
+    font-style: italic;
+    color: var(--soft);
+  }
+  /* Que no se partan entre páginas */
+  .caja,
+  .ecuacion,
+  .markdown-view table,
+  .lectura__algoritmo,
+  .figura,
+  .lectura__ejercicio-titulo {
+    break-inside: avoid;
+  }
+  .lectura h1,
+  .lectura h2,
+  .lectura h3,
+  .caja__titulo,
+  .lectura__algoritmo figcaption {
+    break-after: avoid;
+  }
+}

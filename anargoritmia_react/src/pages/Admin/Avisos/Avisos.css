@@ -1,0 +1,100 @@
+.avisos-admin {
+  padding: 32px 40px 60px;
+}
+.avisos-admin__ayuda {
+  max-width: 60em;
+  margin: 0 0 24px !important;
+  color: var(--soft);
+}
+.avisos-admin__lista {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.avisos-admin__item {
+  --aviso-color: var(--fg);
+  display: grid;
+  gap: 6px;
+  padding: 16px 20px;
+  border: 1px solid var(--line-strong);
+  border-left: 6px solid var(--aviso-color);
+  background: var(--bg);
+}
+.avisos-admin__item--importante {
+  --aviso-color: var(--acc);
+}
+.avisos-admin__item--mantenimiento {
+  --aviso-color: var(--warn);
+}
+.avisos-admin__item--reconocimiento {
+  --aviso-color: var(--ok);
+}
+.avisos-admin__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font: 700 0.8rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.avisos-admin__tipo {
+  color: var(--aviso-color);
+}
+.avisos-admin__estado--vigente {
+  color: var(--ok);
+}
+.avisos-admin__estado--programado {
+  color: var(--warn);
+}
+.avisos-admin__estado--terminado {
+  color: var(--mut);
+}
+.avisos-admin__marca {
+  color: var(--fg);
+}
+.avisos-admin__titulo {
+  margin: 0 !important;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.avisos-admin__meta {
+  margin: 0 !important;
+  color: var(--mut);
+  font-size: 0.92rem;
+}
+.avisos-admin__acciones {
+  display: flex;
+  gap: 16px;
+}
+.avisos-admin__vista {
+  padding: 12px 16px;
+  border: 1px dashed var(--line-strong);
+}
+.avisos-admin__vista-etiqueta {
+  margin: 0 0 6px !important;
+  color: var(--mut);
+  font: 700 0.8rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.avisos-admin__lugares {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.avisos-admin__lugares legend {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.avisos-admin__nota {
+  margin: 0 !important;
+  color: var(--mut);
+  font-size: 0.9rem;
+}
+@media (max-width: 760px) {
+  .avisos-admin {
+    padding: 24px 16px 48px;
+  }
+}

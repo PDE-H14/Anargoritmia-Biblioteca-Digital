@@ -2,8 +2,8 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks";
 import { Logo } from "../../components/UI";
-import { BotonTema } from "../../components/Common";
-import { LOGIN_PATH, RUTAS } from "../../utils/constants";
+import { BandaAvisos, BotonTema } from "../../components/Common";
+import { LOGIN_PATH, RUTAS, RUTA_MAPA, RUTA_NOVEDADES } from "../../utils/constants";
 import "./PublicoLayout.css";
 
 /**
@@ -18,6 +18,17 @@ export function PublicoLayout({ children }) {
   const enlaces = [
     // Las notas públicas pertenecen al catálogo
     { a: "/#catalogo", texto: "Catálogo", activo: pathname === "/" || pathname.startsWith("/notas/") },
+    {
+      a: RUTA_MAPA,
+      // En pantallas angostas solo «Red», para que el menú quepa
+      texto: (
+        <>
+          Red<span className="publico__largo">&nbsp;de conocimiento</span>
+        </>
+      ),
+      clave: "red",
+      activo: pathname === RUTA_MAPA,
+    },
     { a: auth ? RUTAS.LAB : `${LOGIN_PATH}`, texto: "Taller", activo: false },
   ];
   if (!auth) enlaces.push({ a: LOGIN_PATH, texto: "Entrar", activo: false });
@@ -35,7 +46,7 @@ export function PublicoLayout({ children }) {
         <nav className="publico__nav" aria-label="Principal">
           {enlaces.map((e) => (
             <Link
-              key={e.texto}
+              key={e.clave || e.texto}
               to={e.a}
               className={`publico__enlace ${e.activo ? "es-activo" : ""}`}
               aria-current={e.activo ? "page" : undefined}
@@ -47,6 +58,8 @@ export function PublicoLayout({ children }) {
         </nav>
       </header>
 
+      <BandaAvisos lugar="publico" />
+
       <main id="contenido-publico" className="publico__contenido">
         {children}
       </main>
@@ -56,9 +69,12 @@ export function PublicoLayout({ children }) {
           Contenido bajo CC BY-SA 4.0; código bajo licencias abiertas. Este sitio no usa rastreadores ni cookies de
           terceros.
         </p>
-        <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noreferrer license">
-          Leer la licencia<span className="solo-lectores"> (se abre en otra pestaña)</span>
-        </a>
+        <div className="publico__pie-enlaces">
+          <Link to={RUTA_NOVEDADES}>Novedades</Link>
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank" rel="noreferrer license">
+            Leer la licencia<span className="solo-lectores"> (se abre en otra pestaña)</span>
+          </a>
+        </div>
       </footer>
     </div>
   );

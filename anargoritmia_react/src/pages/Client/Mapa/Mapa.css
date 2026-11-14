@@ -1,0 +1,126 @@
+/* Mapa del procomún */
+.mapa {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 56px 64px 48px;
+  color: var(--fg);
+}
+.mapa__titulo {
+  margin: 0 0 16px;
+  font: 400 clamp(2.6rem, 6vw, 5.5rem) / 1 var(--f-cartel);
+  text-transform: uppercase;
+}
+.mapa__intro {
+  max-width: 62em;
+  margin: 0 0 28px;
+  color: var(--soft);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.mapa__filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px 28px;
+  margin-bottom: 16px;
+}
+.mapa__filtro {
+  display: grid;
+  gap: 6px;
+  font: 700 0.85rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mapa__filtro select {
+  min-width: 260px;
+  font-family: var(--f-ui);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.mapa__casilla {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.mapa__casilla input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--fg);
+}
+.mapa__conteo {
+  margin: 0 0 12px auto !important;
+  color: var(--mut);
+  font: 400 0.95rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mapa__vacio {
+  padding: 24px 0;
+  border-top: 3px solid var(--fg);
+  border-bottom: 3px solid var(--fg);
+  color: var(--soft);
+}
+.mapa__leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--soft);
+  font-size: 0.95rem;
+}
+.mapa__leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mapa__muestra {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.mapa__linea {
+  width: 28px;
+  border-top: 2px solid var(--line-strong);
+}
+.mapa__linea--punteada {
+  border-top-style: dashed;
+}
+.mapa__lista {
+  margin-top: 24px;
+}
+.mapa__lista summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.mapa__lista ul {
+  margin: 12px 0 0;
+  padding-left: 1.2em;
+  line-height: 1.7;
+}
+.mapa__lista a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mapa__lista span {
+  color: var(--mut);
+}
+@media (max-width: 760px) {
+  .mapa {
+    padding: 32px 16px 32px;
+  }
+  .mapa__filtro select {
+    min-width: 0;
+    width: 100%;
+  }
+  .mapa__filtro {
+    width: 100%;
+  }
+  .mapa__conteo {
+    margin-left: 0 !important;
+  }
+}

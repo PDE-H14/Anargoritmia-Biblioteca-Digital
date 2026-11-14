@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -10,6 +10,8 @@ import {
   DialogoCorreccion,
   EstructuraNota,
   FiguraSvg,
+  GrafoNotas,
+  vecindario,
   MarkdownView,
   TextoEnLinea,
   analizarEstructura,
@@ -17,8 +19,9 @@ import {
   resaltar,
 } from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
-import { LOGIN_PATH, editarNota, leerNota } from "../../../utils/constants";
+import { LOGIN_PATH, RUTA_MAPA, editarNota, leerNota } from "../../../utils/constants";
 import { firmaAutor } from "../../../utils/notas";
+import { useDatosMapa } from "../../../utils/mapa";
 import "./NoteView.css";
 
 const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
@@ -121,6 +124,11 @@ export function NoteView() {
 function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, corrigiendo, setCorrigiendo }) {
   // Numeración, referencias cruzadas y bibliografía de toda la nota
   const estructura = useMemo(() => analizarEstructura(textosDeLaNota(nota.bloques)), [nota.bloques]);
+  const articulo = useRef(null);
+  const tieneSoluciones = nota.bloques.some((b) => b.tipo === "ejercicio" && b.solucion?.trim());
+  const [conSoluciones, setConSoluciones] = useState(true);
+  useImpresion(articulo, conSoluciones);
+  const direccion = `${window.location.origin}${leerNota(nota.id_documento)}`;
 
   const esAutor = auth && nota.autor?.id_usuario === String(auth.me?.id);
   const autoria = firmaAutor(nota.autor) || "Autoría comunitaria";
@@ -150,9 +158,9 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
 
   return (
     <EstructuraNota.Provider value={estructura}>
-    <article className="lectura">
+    <article ref={articulo} className={`lectura${conSoluciones ? "" : " lectura--sin-soluciones"}`}>
       {nota.es_borrador && (
-        <div className="lectura__fila">
+        <div className="lectura__fila lectura__fila--aviso">
           <div className="lectura__margen" />
           <div className="lectura__cuerpo lectura__cuerpo--aviso">
             <Aviso tipo="advertencia" titulo="Vista previa de un borrador">
@@ -196,6 +204,17 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
                 Basar mi nota en esta
               </Link>
             ))}
+          <div className="lectura__imprimir">
+            <button type="button" className="lectura__derivar" onClick={() => window.print()}>
+              Imprimir o guardar PDF
+            </button>
+            {tieneSoluciones && (
+              <label className="lectura__casilla">
+                <input type="checkbox" checked={conSoluciones} onChange={(e) => setConSoluciones(e.target.checked)} />
+                Incluir soluciones
+              </label>
+            )}
+          </div>
         </div>
         <div className="lectura__cuerpo">
           <h1 className="lectura__titulo">{nota.titulo || "Nota sin título"}</h1>
@@ -257,6 +276,7 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
         return (
           <FilaCelda
             key={bloque.id}
+            direccion={direccion}
             bloque={bloque}
             indice={i}
             numero={numero}
@@ -266,6 +286,8 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
       })}
 
       {nota.ruta?.siguen?.length > 0 && <ListaRuta titulo="Para seguir" notas={nota.ruta.siguen} />}
+
+      {!nota.es_borrador && <MapaLocal idNota={nota.id_documento} />}
 
       <footer className="lectura__fila lectura__notas">
         <div className="lectura__margen">
@@ -280,9 +302,13 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
               </a>
               : puedes copiarla, modificarla y compartirla si atribuyes y conservas la misma licencia.
             </li>
+            <li className="lectura__solo-impresion">
+              Cómo citarla: {autoria} ({nota.fecha_publicacion ? new Date(nota.fecha_publicacion).getFullYear() : "s. f."}). «
+              {nota.titulo || "Nota sin título"}». Anargoritmia. {direccion}
+            </li>
             <li>Las ecuaciones se compilan en tu navegador con KaTeX; el servidor no procesa ni registra tu lectura.</li>
             {!auth && !nota.es_borrador && nota.bloques.length > 0 && (
-              <li>
+              <li className="lectura__en-pantalla">
                 ¿Encontraste un error?{" "}
                 <Link to={LOGIN_PATH} state={{ from: location }}>
                   Inicia sesión
@@ -312,7 +338,7 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
   );
 }
 
-function FilaCelda({ bloque, indice, numero, onCorregir }) {
+function FilaCelda({ bloque, indice, numero, onCorregir, direccion }) {
   const { tipo, contenido, lenguaje, version, notas, archivo, titulo } = bloque;
   const nombreTipo = esFigura(bloque) ? "Figura" : TIPOS[tipo];
 
@@ -357,15 +383,21 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
             </MarkdownView>
             {bloque.pista?.trim() && (
               <details className="lectura__plegable">
-                <summary>Ver una pista</summary>
+                <summary>
+                  <span className="lectura__en-pantalla">Ver una pista</span>
+                  <span className="lectura__solo-impresion">Pista</span>
+                </summary>
                 <MarkdownView className="lectura__texto" clave={`${bloque.id}:pista`}>
                   {bloque.pista}
                 </MarkdownView>
               </details>
             )}
             {bloque.solucion?.trim() && (
-              <details className="lectura__plegable">
-                <summary>Ver la solución</summary>
+              <details className="lectura__plegable lectura__plegable--solucion">
+                <summary>
+                  <span className="lectura__en-pantalla">Ver la solución</span>
+                  <span className="lectura__solo-impresion">Solución</span>
+                </summary>
                 <MarkdownView className="lectura__texto" clave={`${bloque.id}:solucion`}>
                   {bloque.solucion}
                 </MarkdownView>
@@ -394,6 +426,9 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
             ) : tipo === "animacion" ? (
               <>
                 <AnimacionAislada codigo={contenido} titulo={titulo || `Animación ${numero}`} />
+                <p className="lectura__solo-impresion lectura__aviso-impreso">
+                  Animación interactiva: consúltala en línea en {direccion}
+                </p>
                 <details className="lectura__fuente">
                   <summary>Ver el código</summary>
                   <CodigoNumerado contenido={contenido} lenguaje="javascript" />
@@ -475,5 +510,68 @@ function BotonCopiar({ texto }) {
         {estado}
       </span>
     </>
+  );
+}
+
+/**
+ * Al imprimir (con el botón o con Ctrl+P) se abren las demostraciones, las
+ * pistas y, si se pidieron, las soluciones: el navegador no imprime el
+ * contenido de un <details> cerrado. Al terminar vuelven a como estaban.
+ */
+function useImpresion(articulo, conSoluciones) {
+  useEffect(() => {
+    let cerrados = [];
+    const antes = () => {
+      cerrados = [...(articulo.current?.querySelectorAll("details:not([open])") || [])].filter(
+        (d) => conSoluciones || !d.classList.contains("lectura__plegable--solucion")
+      );
+      cerrados.forEach((d) => {
+        d.open = true;
+      });
+    };
+    const despues = () => {
+      cerrados.forEach((d) => {
+        d.open = false;
+      });
+      cerrados = [];
+    };
+    window.addEventListener("beforeprint", antes);
+    window.addEventListener("afterprint", despues);
+    return () => {
+      window.removeEventListener("beforeprint", antes);
+      window.removeEventListener("afterprint", despues);
+    };
+  }, [articulo, conSoluciones]);
+}
+
+/** Mapa local: la nota al centro, con sus vecinas a uno o dos pasos (como en Obsidian). */
+function MapaLocal({ idNota }) {
+  const navigate = useNavigate();
+  const { notas, colorDe } = useDatosMapa();
+  const cercanas = useMemo(() => (notas ? vecindario(notas, idNota, 2) : []), [notas, idNota]);
+  if (cercanas.length < 2) return null; // sola, no hay nada que mostrar
+  return (
+    <section className="lectura__fila lectura__mapa" aria-label="Red de esta nota">
+      <div className="lectura__margen">
+        <p className="lectura__versalitas">Red de esta nota</p>
+        <Link to={RUTA_MAPA} className="lectura__editar">
+          Ver la red completa
+        </Link>
+      </div>
+      <div className="lectura__cuerpo">
+        <GrafoNotas
+          key={idNota}
+          notas={cercanas}
+          centro={idNota}
+          colorDe={colorDe}
+          alto={340}
+          zoomConRueda={false}
+          separacion={1.9}
+          largoNombre={26}
+          onAbrir={(id) => id !== idNota && navigate(leerNota(id))}
+          etiqueta="Red de esta nota"
+        />
+      </div>
+    </section>
   );
 }

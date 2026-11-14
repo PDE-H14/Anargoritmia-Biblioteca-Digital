@@ -128,3 +128,19 @@
   height: auto;
   margin: 0 auto;
 }
+.figura__papel {
+  display: none !important;
+}
+@media print {
+  .figura {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .figura__pantalla {
+    display: none !important;
+  }
+  .figura__papel {
+    display: block !important;
+  }
+}

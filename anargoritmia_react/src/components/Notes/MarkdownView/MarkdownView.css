@@ -59,16 +59,6 @@
   opacity: 0.85;
 }
 
-.markdown-view table {
-  border-collapse: collapse;
-  margin: 1em 0;
-}
-.markdown-view th,
-.markdown-view td {
-  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-  padding: 6px 10px;
-}
-
 .markdown-view ul,
 .markdown-view ol {
   padding-left: 1.5em;
@@ -81,12 +71,13 @@
   padding: 4px 0;
 }
 
-/* ---- Tablas (GFM) ---- */
+/* ---- Tablas (GFM): centradas; si no caben, se desplazan en horizontal ---- */
 .markdown-view table {
   display: block;
+  width: max-content;
   max-width: 100%;
   overflow-x: auto;
-  margin: 1em 0;
+  margin: 1em auto;
   border-collapse: collapse;
   font-size: 0.95em;
   line-height: 1.45;
@@ -94,7 +85,8 @@
 .markdown-view th,
 .markdown-view td {
   padding: 6px 12px;
-  border-bottom: 1px solid var(--line-strong);
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-width: 0 1px 1px;
   text-align: left;
   vertical-align: top;
 }
@@ -203,6 +195,9 @@
   border: 0;
   padding: 0;
   background: none;
+}
+.markdown-view .caja--tabla > .caja__titulo {
+  text-align: center;
 }
 .markdown-view .caja--tabla table {
   margin-top: 0.3em;

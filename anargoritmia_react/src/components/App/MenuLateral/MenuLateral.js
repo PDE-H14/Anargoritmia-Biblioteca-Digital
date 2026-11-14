@@ -3,12 +3,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks";
 import { Logo, Icono } from "../../UI";
 import { BotonTema } from "../../Common";
-import { LOGIN_PATH, RUTAS } from "../../../utils/constants";
+import { LOGIN_PATH, RUTAS, RUTA_MAPA } from "../../../utils/constants";
 import "./MenuLateral.css";
 
 // Las entradas del taller, en el orden del diseño F. «Catálogo» sale a la portada pública.
 const ENTRADAS = [
   { a: "/#catalogo", texto: "Catálogo", icono: "catalogo", activa: () => false },
+  { a: RUTA_MAPA, texto: "Red de conocimiento", icono: "mapa", activa: () => false },
   { a: RUTAS.LAB, texto: "Recientes", icono: "recientes", activa: (p) => p === RUTAS.LAB },
   { a: RUTAS.MIS_NOTAS, texto: "Mis notas", icono: "notas", activa: (p) => p === RUTAS.MIS_NOTAS },
   { a: RUTAS.CATEGORIAS, texto: "Categorías", icono: "carpeta", soloStaff: true, activa: (p) => p === RUTAS.CATEGORIAS },
@@ -16,6 +17,7 @@ const ENTRADAS = [
   { a: RUTAS.CREAR, texto: "Creación", icono: "lapiz", activa: (p) => p.startsWith("/lab/notas/") },
   { a: RUTAS.USUARIOS, texto: "Usuarios", icono: "usuarios", soloStaff: true, activa: (p) => p === RUTAS.USUARIOS },
   { a: RUTAS.CORRECCIONES, texto: "Correcciones", icono: "advertencia", soloStaff: true, activa: (p) => p === RUTAS.CORRECCIONES },
+  { a: RUTAS.AVISOS, texto: "Avisos", icono: "megafono", soloStaff: true, activa: (p) => p === RUTAS.AVISOS },
   { a: RUTAS.MIS_DATOS, texto: "Mis datos", icono: "ficha", activa: (p) => p === RUTAS.MIS_DATOS },
 ];
 

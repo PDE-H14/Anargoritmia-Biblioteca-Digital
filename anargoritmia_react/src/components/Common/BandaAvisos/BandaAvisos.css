@@ -1,0 +1,91 @@
+/* Banda de avisos de la administración (sitio público y taller) */
+.banda-avisos {
+  --aviso-color: var(--fg);
+  border-bottom: 1px solid var(--line-strong);
+  border-left: 6px solid var(--aviso-color);
+  background: var(--sur);
+  color: var(--fg);
+}
+.banda-avisos--importante {
+  --aviso-color: var(--acc);
+}
+.banda-avisos--mantenimiento {
+  --aviso-color: var(--warn);
+}
+.banda-avisos--novedad {
+  --aviso-color: var(--fg);
+}
+.banda-avisos--reconocimiento {
+  --aviso-color: var(--ok);
+}
+.banda-avisos__contenido {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 12px 24px;
+}
+.banda-avisos__tipo {
+  margin: 2px 0 0 !important;
+  color: var(--aviso-color);
+  font: 700 0.8rem/1.4 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.banda-avisos__titulo {
+  margin: 0 !important;
+  font: 700 1rem/1.4 var(--f-ui);
+}
+.banda-avisos__cuerpo {
+  margin-top: 2px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.banda-avisos__cuerpo p {
+  margin: 0 0 4px;
+}
+.banda-avisos__mas {
+  margin: 4px 0 0 !important;
+  font-size: 0.9rem;
+}
+.banda-avisos__mas a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.banda-avisos__cerrar {
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: 400 1.6rem/1 var(--f-ui);
+  cursor: pointer;
+}
+.banda-avisos__cerrar:hover,
+.banda-avisos__cerrar:focus-visible {
+  background: var(--line);
+}
+@media (max-width: 640px) {
+  .banda-avisos__contenido {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 16px;
+  }
+  .banda-avisos__tipo {
+    grid-column: 1;
+  }
+  .banda-avisos__texto {
+    grid-column: 1;
+  }
+  .banda-avisos__cerrar {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+@media print {
+  .banda-avisos {
+    display: none !important;
+  }
+}

@@ -144,6 +144,9 @@ def version_publica(nota):
     return publica
 
 
+MAX_NOTAS_GRAFO = 2000
+
+
 class NotaViewSet(viewsets.GenericViewSet):
     lookup_field = 'id_documento'
     serializer_class = NotaSerializer
@@ -158,7 +161,7 @@ class NotaViewSet(viewsets.GenericViewSet):
         Lectura pública para notas publicadas;
         escritura y correcciones restringidas a usuarios autenticados vía JWT.
         """
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'grafo']:
             return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
@@ -212,6 +215,31 @@ class NotaViewSet(viewsets.GenericViewSet):
         for nota in notas:
             nota["celdas"] = resumen_publico(nota["celdas"])
         return Response(NotaResumenSerializer(notas, many=True).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def grafo(self, request):
+        """
+        GET /api/notas/grafo/: el mapa del procomún. Solo notas publicadas, con
+        lo mínimo para dibujarlas: título, firma, categoría, prerrequisitos y
+        nota de origen. Las aristas que apuntan a borradores no se incluyen.
+        """
+        notas = list(self.coleccion.find(
+            {"es_borrador": False},
+            {"_id": 0, "id_documento": 1, "titulo": 1, "id_categoria": 1, "prerrequisitos": 1,
+             "origen.id_documento": 1, "autor.firma": 1, "autor.alias": 1},
+        ).limit(MAX_NOTAS_GRAFO))
+        publicadas = {n["id_documento"] for n in notas}
+        return Response({"notas": [
+            {
+                "id_documento": n["id_documento"],
+                "titulo": n.get("titulo") or "Nota sin título",
+                "firma": (n.get("autor") or {}).get("firma") or (n.get("autor") or {}).get("alias", ""),
+                "id_categoria": n.get("id_categoria", ""),
+                "prerrequisitos": [p for p in n.get("prerrequisitos") or [] if p in publicadas],
+                "origen": o if (o := (n.get("origen") or {}).get("id_documento")) in publicadas else None,
+            }
+            for n in notas
+        ]}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def mias(self, request):

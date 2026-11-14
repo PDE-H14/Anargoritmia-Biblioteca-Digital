@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { AdminLayout } from "../layouts";
-import { HomeAdmin, UsersAdmin, Categories, Me, Moderacion } from "../pages/Admin";
+import { Avisos, HomeAdmin, UsersAdmin, Categories, Me, Moderacion } from "../pages/Admin";
 import { NoteEditor, MyNotes } from "../pages/Admin/Notes";
 import { RUTAS, RUTA_EDITAR_NOTA } from "../utils/constants";
 
@@ -48,6 +48,12 @@ const routesAdmin = [
     path: RUTAS.CORRECCIONES,
     layout: AdminLayout,
     component: Moderacion,
+    staffOnly: true,
+  },
+  {
+    path: RUTAS.AVISOS,
+    layout: AdminLayout,
+    component: Avisos,
     staffOnly: true,
   },
   {

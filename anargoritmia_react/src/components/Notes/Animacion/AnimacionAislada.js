@@ -393,6 +393,8 @@ export function AnimacionAislada({ codigo, titulo = "Animación", onCapturar }) 
   );
 }
 
+const COLORES_PAPEL = { bg: "#ffffff", fg: "#141210", mut: "#5b616e", acc: "#c8102e", line: "#8b919c" };
+
 // El SVG guardado usa las variables del marco (--fg, --acc...): al mostrarlo
 // se le agregan con los colores del tema actual
 function svgConTema(svg, colores) {
@@ -414,10 +416,15 @@ export function FiguraSvg({ svg, titulo = "Figura" }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [svg, tema]
   );
+  // En papel siempre va en colores claros, aunque la pantalla esté en modo oscuro
+  const papel = useMemo(() => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgConTema(svg, COLORES_PAPEL))}`, [svg]);
   const medida = svg.match(/<svg\b[^>]*\bwidth="(\d+(?:\.\d+)?)"/i);
+  const estilo = medida ? { maxWidth: `${medida[1]}px` } : undefined;
+  const alt = titulo.replace(/[$\\]/g, "");
   return (
     <div className="figura">
-      <img src={fuente} alt={titulo.replace(/[$\\]/g, "")}style={medida ? { maxWidth: `${medida[1]}px` } : undefined} />
+      <img className="figura__pantalla" src={fuente} alt={alt} style={estilo} />
+      <img className="figura__papel" src={papel} alt="" aria-hidden="true" style={estilo} />
     </div>
   );
 }

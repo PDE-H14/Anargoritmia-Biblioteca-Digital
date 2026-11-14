@@ -119,3 +119,14 @@
     letter-spacing: 0.06em;
   }
 }
+
+@media (max-width: 640px) {
+  .publico__largo {
+    display: none;
+  }
+}
+.publico__pie-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}

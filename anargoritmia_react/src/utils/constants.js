@@ -16,11 +16,14 @@ export const RUTAS = {
   USUARIOS: "/admin/usuarios",
   CATEGORIAS: "/admin/categorias",
   CORRECCIONES: "/admin/correcciones",
+  AVISOS: "/admin/avisos",
 };
 
 // Editor y lectura de notas. "nueva" crea un borrador al primer autoguardado.
 export const NOTA_NUEVA = "nueva";
 export const RUTA_EDITAR_NOTA = "/lab/notas/:id";
 export const RUTA_LEER_NOTA = "/notas/:id";
+export const RUTA_MAPA = "/red";
+export const RUTA_NOVEDADES = "/novedades";
 export const editarNota = (id) => `/lab/notas/${id}`;
 export const leerNota = (id) => `/notas/${id}`;

@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'usuarios',
     'notas',
     'categorias',
+    'avisos',
 ]
 
 MIDDLEWARE = [
