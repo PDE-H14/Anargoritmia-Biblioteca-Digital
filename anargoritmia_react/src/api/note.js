@@ -66,6 +66,7 @@ export function retirarCorreccionApi(idCorreccion, token) {
 }
 
 // Mapa del procomún: notas publicadas con prerrequisitos y nota de origen (sin contenido)
-export function getGrafoApi() {
-  return apiFetch("/api/notas/grafo/");
+// Con sesión y `borradores`, también los borradores propios
+export function getGrafoApi({ borradores = false, token } = {}) {
+  return apiFetch(`/api/notas/grafo/${borradores ? "?borradores=1" : ""}`, { token: borradores ? token : undefined });
 }

@@ -219,24 +219,35 @@ class NotaViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['get'])
     def grafo(self, request):
         """
-        GET /api/notas/grafo/: el mapa del procomún. Solo notas publicadas, con
-        lo mínimo para dibujarlas: título, firma, categoría, prerrequisitos y
-        nota de origen. Las aristas que apuntan a borradores no se incluyen.
+        GET /api/notas/grafo/: la red del procomún. Solo notas publicadas, con
+        lo mínimo para dibujarlas y describirlas: título, firma, autor,
+        categoría, etiquetas, conteo de celdas, prerrequisitos y nota de
+        origen. Las aristas que apuntan a notas que no salen no se incluyen.
+        Con ?borradores=1 y sesión, se agregan los borradores propios.
         """
+        filtro = {"es_borrador": False}
+        if request.query_params.get("borradores") == "1" and request.user.is_authenticated:
+            filtro = {"$or": [{"es_borrador": False},
+                              {"es_borrador": True, "autor.id_usuario": str(request.user.id)}]}
         notas = list(self.coleccion.find(
-            {"es_borrador": False},
-            {"_id": 0, "id_documento": 1, "titulo": 1, "id_categoria": 1, "prerrequisitos": 1,
-             "origen.id_documento": 1, "autor.firma": 1, "autor.alias": 1},
+            filtro,
+            {"_id": 0, "id_documento": 1, "titulo": 1, "id_categoria": 1, "prerrequisitos": 1, "etiquetas": 1,
+             "origen.id_documento": 1, "autor.firma": 1, "autor.alias": 1, "autor.id_usuario": 1,
+             "celdas": 1, "es_borrador": 1},
         ).limit(MAX_NOTAS_GRAFO))
-        publicadas = {n["id_documento"] for n in notas}
+        visibles = {n["id_documento"] for n in notas}
         return Response({"notas": [
             {
                 "id_documento": n["id_documento"],
                 "titulo": n.get("titulo") or "Nota sin título",
                 "firma": (n.get("autor") or {}).get("firma") or (n.get("autor") or {}).get("alias", ""),
+                "id_autor": (n.get("autor") or {}).get("id_usuario", ""),
                 "id_categoria": n.get("id_categoria", ""),
-                "prerrequisitos": [p for p in n.get("prerrequisitos") or [] if p in publicadas],
-                "origen": o if (o := (n.get("origen") or {}).get("id_documento")) in publicadas else None,
+                "etiquetas": n.get("etiquetas") or [],
+                "celdas": resumen_publico(n["celdas"]) if n.get("celdas") else None,
+                "es_borrador": bool(n.get("es_borrador")),
+                "prerrequisitos": [p for p in n.get("prerrequisitos") or [] if p in visibles],
+                "origen": o if (o := (n.get("origen") or {}).get("id_documento")) in visibles else None,
             }
             for n in notas
         ]}, status=status.HTTP_200_OK)

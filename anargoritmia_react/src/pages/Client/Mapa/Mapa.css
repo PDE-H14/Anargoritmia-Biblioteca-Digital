@@ -1,126 +1,330 @@
-/* Mapa del procomún */
-.mapa {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 56px 64px 48px;
+/* Red del procomún */
+.red {
   color: var(--fg);
 }
-.mapa__titulo {
-  margin: 0 0 16px;
-  font: 400 clamp(2.6rem, 6vw, 5.5rem) / 1 var(--f-cartel);
+
+/* Banda superior, como el encabezado de las páginas del taller */
+.red__cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  padding: 30px 40px 28px;
+  background: var(--band);
+  color: var(--band-fg);
+  border-bottom: 6px solid var(--band-rule);
+}
+.red__titulo {
+  margin: 0 !important;
+  font: 400 clamp(2.4rem, 5vw, 4rem) / 1 var(--f-cartel);
   text-transform: uppercase;
 }
-.mapa__intro {
-  max-width: 62em;
-  margin: 0 0 28px;
-  color: var(--soft);
-  font-size: 1.1rem;
-  line-height: 1.6;
+.red__resumen {
+  margin: 10px 0 0 !important;
+  color: var(--band-soft);
+  font-size: 1.15rem;
 }
-.mapa__filtros {
+.red__catalogo.boton {
+  border: 2px solid currentColor;
+  background: transparent;
+  color: var(--band-fg);
+  align-self: center;
+}
+.red__catalogo.boton:hover {
+  background: var(--band-fg);
+  color: var(--bg);
+}
+.red__mensaje {
+  padding: 40px;
+}
+
+/* Escena: la red ocupa todo; búsqueda, filtros, leyenda y ficha flotan encima */
+.red__escena {
+  position: relative;
+  background: var(--bg);
+}
+.red__lienzo {
+  position: relative;
+  z-index: 0;
+}
+.red__buscar,
+.red__filtros,
+.red__leyenda,
+.red__ficha {
+  position: absolute;
+  z-index: 1;
+}
+.red__buscar {
+  top: 28px;
+  left: 32px;
+  width: min(420px, 34%);
+}
+.red__buscar label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--soft);
+  font: 400 0.9rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.red__buscar input {
+  width: 100%;
+  background: var(--bg);
+}
+.red__coinciden {
+  margin: 6px 0 0 !important;
+  color: var(--mut);
+  font: 400 0.85rem/1.3 var(--f-mono);
+}
+.red__filtros {
+  top: 28px;
+  right: 32px;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 16px 28px;
-  margin-bottom: 16px;
+  justify-content: flex-end;
+  gap: 10px;
+  max-width: 60%;
 }
-.mapa__filtro {
-  display: grid;
-  gap: 6px;
-  font: 700 0.85rem/1 var(--f-mono);
+.red__chip {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 2px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 700 0.9rem/1 var(--f-mono);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.mapa__filtro select {
-  min-width: 260px;
-  font-family: var(--f-ui);
-  text-transform: none;
-  letter-spacing: 0;
-}
-.mapa__casilla {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
+  letter-spacing: 0.12em;
   cursor: pointer;
 }
-.mapa__casilla input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--fg);
+.red__chip[aria-pressed="true"] {
+  border-color: var(--fg);
+  background: var(--fg);
+  color: var(--bg);
 }
-.mapa__conteo {
-  margin: 0 0 12px auto !important;
-  color: var(--mut);
-  font: 400 0.95rem/1 var(--f-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.red__chip--rojo[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
 }
-.mapa__vacio {
-  padding: 24px 0;
-  border-top: 3px solid var(--fg);
-  border-bottom: 3px solid var(--fg);
+.red__chip:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 3px;
+}
+.red__vacio {
+  margin: 0 !important;
+  padding: 160px 32px;
   color: var(--soft);
+  text-align: center;
 }
-.mapa__leyenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  margin: 16px 0 0;
+
+.red__leyenda {
+  left: 32px;
+  bottom: 28px;
+  display: grid;
+  gap: 12px;
+  margin: 0;
   padding: 0;
   list-style: none;
   color: var(--soft);
-  font-size: 0.95rem;
+  font: 400 0.9rem/1.2 var(--f-mono);
+  pointer-events: none;
 }
-.mapa__leyenda li {
+.red__leyenda li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
-.mapa__muestra {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-.mapa__linea {
-  width: 28px;
+.red__linea {
+  width: 40px;
   border-top: 2px solid var(--line-strong);
 }
-.mapa__linea--punteada {
-  border-top-style: dashed;
+.red__linea--roja {
+  border-top: 3px solid var(--brand);
 }
-.mapa__lista {
-  margin-top: 24px;
+.red__circulo,
+.red__punto {
+  display: grid;
+  place-items: center;
+  width: 40px;
 }
-.mapa__lista summary {
+.red__circulo::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--soft);
+  border-radius: 50%;
+}
+.red__punto::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* Ficha de la nota elegida */
+.red__ficha {
+  right: 32px;
+  bottom: 28px;
+  width: min(540px, 40%);
+  padding: 26px 28px 24px;
+  border: 2px solid var(--fg);
+  background: var(--bg);
+  box-shadow: var(--sombra);
+}
+.red__cerrar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: 400 1.6rem/1 var(--f-ui);
+  cursor: pointer;
+}
+.red__cerrar:hover,
+.red__cerrar:focus-visible {
+  background: var(--line);
+}
+.red__ficha-ruta {
+  margin: 0 40px 12px 0 !important;
+  color: var(--soft);
+  font: 400 0.85rem/1.6 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.red__ficha-titulo {
+  margin: 0 0 12px;
+  font: 800 1.7rem/1.2 var(--f-ui);
+}
+.red__ficha-autor {
+  margin: 0 0 16px !important;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+.red__ficha-datos {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-size: 1.1rem;
+}
+.red__ficha-datos div {
+  display: grid;
+  grid-template-columns: 11em minmax(0, 1fr);
+  gap: 12px;
+}
+.red__ficha-datos dt {
+  color: var(--soft);
+}
+.red__ficha-datos dd {
+  margin: 0;
+}
+.red__ficha-lista {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.red__enlace {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.red__enlace:hover,
+.red__enlace:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.red__ficha-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.red__pie {
+  padding: 22px 40px 26px;
+  border-top: 1px solid var(--line-strong);
+  color: var(--soft);
+  font: 400 0.92rem/1.6 var(--f-mono);
+}
+.red__pie p {
+  margin: 0 0 6px !important;
+}
+.red__lista {
+  padding: 0 40px 40px;
+}
+.red__lista summary {
   cursor: pointer;
   font-weight: 700;
 }
-.mapa__lista ul {
+.red__lista ul {
   margin: 12px 0 0;
   padding-left: 1.2em;
   line-height: 1.7;
 }
-.mapa__lista a {
+.red__lista a {
   color: var(--fg);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.mapa__lista span {
+.red__lista span {
   color: var(--mut);
 }
-@media (max-width: 760px) {
-  .mapa {
-    padding: 32px 16px 32px;
+
+/* En pantallas angostas los controles van arriba y abajo, no encima */
+@media (max-width: 1000px) {
+  .red__escena {
+    display: flex;
+    flex-direction: column;
   }
-  .mapa__filtro select {
-    min-width: 0;
-    width: 100%;
+  .red__buscar,
+  .red__filtros,
+  .red__leyenda,
+  .red__ficha {
+    position: static;
+    width: auto;
+    max-width: none;
   }
-  .mapa__filtro {
-    width: 100%;
+  .red__buscar {
+    order: 1;
+    padding: 20px 16px 8px;
   }
-  .mapa__conteo {
-    margin-left: 0 !important;
+  .red__filtros {
+    order: 2;
+    justify-content: flex-start;
+    padding: 8px 16px 12px;
+  }
+  .red__lienzo {
+    order: 3;
+  }
+  .red__ficha {
+    order: 4;
+    margin: 0 16px 16px;
+  }
+  .red__leyenda {
+    order: 5;
+    padding: 12px 16px 20px;
+  }
+  .red__cabecera,
+  .red__pie,
+  .red__lista {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .red__chip {
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 0.8rem;
+  }
+  .red__ficha-datos div {
+    grid-template-columns: 9em minmax(0, 1fr);
   }
 }

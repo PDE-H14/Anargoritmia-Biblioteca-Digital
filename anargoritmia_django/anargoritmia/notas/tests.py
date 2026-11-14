@@ -888,3 +888,18 @@ class GrafoTests(MongoAPITestCase):
         self.assertEqual(notas["Derivadas"]["prerrequisitos"], [])
         self.assertNotIn("Límites", notas)
         self.assertTrue(b)
+
+    def test_borradores_propios_solo_con_sesion_y_campos_de_descripcion(self):
+        a = self.publicar("Límites", etiquetas=["calculo"])
+        borrador = self.client.post(URL, {"titulo": "Borrador", "prerrequisitos": [a["id_documento"]]}, format="json").data
+        con = self.client.get(f"{URL}grafo/", {"borradores": "1"}).data["notas"]
+        notas = {n["titulo"]: n for n in con}
+        self.assertTrue(notas["Borrador"]["es_borrador"])
+        self.assertEqual(notas["Borrador"]["prerrequisitos"], [a["id_documento"]])
+        self.assertEqual(notas["Límites"]["etiquetas"], ["calculo"])
+        self.assertEqual(notas["Límites"]["id_autor"], str(self.autora.id))
+        self.assertEqual(notas["Límites"]["celdas"]["publicas"], 1)
+        self.client.force_authenticate(None)
+        sin = {n["titulo"] for n in self.client.get(f"{URL}grafo/", {"borradores": "1"}).data["notas"]}
+        self.assertNotIn("Borrador", sin)
+        self.assertTrue(borrador)

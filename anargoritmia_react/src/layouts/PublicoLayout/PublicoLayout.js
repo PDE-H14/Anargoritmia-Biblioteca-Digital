@@ -18,17 +18,7 @@ export function PublicoLayout({ children }) {
   const enlaces = [
     // Las notas públicas pertenecen al catálogo
     { a: "/#catalogo", texto: "Catálogo", activo: pathname === "/" || pathname.startsWith("/notas/") },
-    {
-      a: RUTA_MAPA,
-      // En pantallas angostas solo «Red», para que el menú quepa
-      texto: (
-        <>
-          Red<span className="publico__largo">&nbsp;de conocimiento</span>
-        </>
-      ),
-      clave: "red",
-      activo: pathname === RUTA_MAPA,
-    },
+    { a: RUTA_MAPA, texto: "Red", activo: pathname === RUTA_MAPA },
     { a: auth ? RUTAS.LAB : `${LOGIN_PATH}`, texto: "Taller", activo: false },
   ];
   if (!auth) enlaces.push({ a: LOGIN_PATH, texto: "Entrar", activo: false });
@@ -46,7 +36,7 @@ export function PublicoLayout({ children }) {
         <nav className="publico__nav" aria-label="Principal">
           {enlaces.map((e) => (
             <Link
-              key={e.clave || e.texto}
+              key={e.texto}
               to={e.a}
               className={`publico__enlace ${e.activo ? "es-activo" : ""}`}
               aria-current={e.activo ? "page" : undefined}

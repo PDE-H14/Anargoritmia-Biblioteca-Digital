@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { AdminLayout } from "../layouts";
 import { Avisos, HomeAdmin, UsersAdmin, Categories, Me, Moderacion } from "../pages/Admin";
 import { NoteEditor, MyNotes } from "../pages/Admin/Notes";
+import { Mapa } from "../pages/Client";
 import { RUTAS, RUTA_EDITAR_NOTA } from "../utils/constants";
 
 const SinLayout = ({ children }) => children;
@@ -20,6 +21,12 @@ const routesAdmin = [
     path: RUTAS.MIS_NOTAS,
     layout: AdminLayout,
     component: MyNotes,
+  },
+  {
+    // La red del procomún dentro del taller (en /red está la pública)
+    path: RUTAS.RED,
+    layout: AdminLayout,
+    component: Mapa,
   },
   {
     // Incluye /lab/notas/nueva (RUTAS.CREAR): el editor crea el borrador al primer guardado

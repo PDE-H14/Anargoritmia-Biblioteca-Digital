@@ -1,0 +1,66 @@
+/* Red local de una nota, en el margen de la lectura */
+.red-local {
+  margin: 36px 0 24px;
+}
+.red-local__dibujo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 8px 0 14px;
+}
+.red-local__linea {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+.red-local__linea--roja {
+  stroke: var(--brand);
+  stroke-width: 2.5;
+}
+.red-local__centro {
+  fill: var(--brand);
+  stroke: var(--fg);
+  stroke-width: 3;
+}
+.red-local__vecina {
+  fill: var(--bg);
+  stroke: var(--soft);
+  stroke-width: 2;
+}
+.red-local__vecina--roja {
+  stroke: var(--brand);
+  stroke-width: 2.5;
+}
+.red-local__numero {
+  fill: var(--fg);
+  font: 700 12px/1 var(--f-ui);
+  text-anchor: middle;
+}
+.red-local__lista {
+  margin: 0 0 18px;
+  padding-left: 1.6em;
+  color: var(--soft);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.red-local__lista li {
+  margin-bottom: 8px;
+}
+.red-local__lista a {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.red-local__roja a {
+  color: var(--acc);
+}
+.red-local__relacion {
+  display: block;
+  color: var(--mut);
+  font-size: 0.9rem;
+}
+.red-local__completa {
+  color: var(--fg);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

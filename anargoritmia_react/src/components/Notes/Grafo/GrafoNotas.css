@@ -1,11 +1,9 @@
-/* Grafo de notas (mapa del procomún y mapa local de cada nota) */
+/* Red de notas (página de la red del procomún) */
 .grafo {
   position: relative;
   width: 100%;
   overflow: hidden;
-  border: 1px solid var(--line-strong);
-  background: var(--sur);
-  touch-action: none; /* los dedos mueven el mapa, no la página */
+  touch-action: none; /* los dedos mueven la red, no la página */
   user-select: none;
 }
 .grafo__lienzo {
@@ -15,70 +13,85 @@
 .grafo__lienzo:active {
   cursor: grabbing;
 }
+.grafo__grupo circle {
+  fill: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.grafo__grupo-nombre {
+  fill: var(--mut);
+  font: 400 15px/1 var(--f-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  pointer-events: none;
+}
 .grafo__arista {
   stroke: var(--line-strong);
-  stroke-width: 1.4;
+  stroke-width: 1.5;
+  opacity: 0.75;
   transition: opacity 0.15s;
 }
 .grafo__arista--origen {
-  stroke-dasharray: 4 4;
+  stroke: var(--brand);
+  stroke-width: 3;
+  opacity: 0.95;
 }
-.grafo__punta {
-  fill: var(--line-strong);
+.grafo__arista.es-activa {
+  opacity: 1;
+  stroke-width: 2.2;
+}
+.grafo__arista--origen.es-activa {
+  stroke-width: 3.5;
 }
 .grafo__nodo {
   cursor: pointer;
   transition: opacity 0.15s;
 }
-.grafo__nodo circle {
-  stroke: var(--sur);
-  stroke-width: 1.5;
+.grafo__punto {
+  fill: var(--bg);
+  stroke: var(--soft);
+  stroke-width: 2.5;
 }
-.grafo__nodo.es-centro circle {
+.grafo__nodo:hover .grafo__punto,
+.grafo__nodo:focus-visible .grafo__punto {
+  stroke: var(--fg);
+}
+.grafo__nodo.es-borrador .grafo__punto {
+  stroke-dasharray: 4 3;
+}
+.grafo__nodo.es-elegida .grafo__punto {
+  fill: var(--brand);
   stroke: var(--fg);
   stroke-width: 3;
+}
+.grafo__halo {
+  fill: none;
+  stroke: var(--brand);
+  stroke-opacity: 0.45;
+  stroke-width: 2;
+}
+.grafo__mia {
+  fill: var(--brand);
+  stroke: var(--bg);
+  stroke-width: 1.5;
 }
 .grafo__nodo:focus {
   outline: none;
 }
-.grafo__nodo:focus-visible circle {
-  stroke: var(--fg);
-  stroke-width: 3;
-}
 .grafo__nombre {
   fill: var(--fg);
-  font-family: var(--f-ui);
+  font: 700 14px/1 var(--f-ui);
   text-anchor: middle;
   paint-order: stroke;
-  stroke: var(--sur);
-  stroke-width: 3px;
+  stroke: var(--bg);
+  stroke-width: 4px;
   stroke-linejoin: round;
   pointer-events: none;
 }
+.grafo__nombre--elegida {
+  font-size: 17px;
+}
 .es-tenue {
-  opacity: 0.18;
-}
-.grafo__controles {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  display: flex;
-  gap: 6px;
-}
-.grafo__controles button {
-  min-width: 40px;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 2px solid var(--fg);
-  background: var(--bg);
-  color: var(--fg);
-  font: 700 0.95rem/1 var(--f-ui);
-  cursor: pointer;
-}
-.grafo__controles button:hover,
-.grafo__controles button:focus-visible {
-  background: var(--fg);
-  color: var(--bg);
+  opacity: 0.2;
 }
 @media (prefers-reduced-motion: reduce) {
   .grafo__arista,

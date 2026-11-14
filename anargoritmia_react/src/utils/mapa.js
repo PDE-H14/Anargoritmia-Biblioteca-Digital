@@ -3,54 +3,60 @@ import { useEffect, useMemo, useState } from "react";
 import { getCategoriesApi } from "../api/category";
 import { conReintentos } from "../api/http";
 import { getGrafoApi } from "../api/note";
-import { PALETA } from "../components/Notes";
 import { indiceCategorias } from "./categorias";
 
-// El mapa se pide una vez y se reutiliza un minuto (al pasar de nota en nota)
+// La red se pide una vez y se reutiliza un minuto (al pasar de nota en nota)
 const VIGENCIA_MS = 60_000;
-let cache = null;
+const cache = new Map();
 
-function pedirMapa() {
-  if (!cache || Date.now() - cache.hora > VIGENCIA_MS) {
-    const promesa = conReintentos(() => Promise.all([getGrafoApi(), getCategoriesApi()]));
-    cache = { hora: Date.now(), promesa };
-    promesa.catch(() => {
-      cache = null;
-    });
+function pedirRed(borradores, token) {
+  const clave = borradores ? `borradores:${token}` : "publica";
+  const guardado = cache.get(clave);
+  if (!guardado || Date.now() - guardado.hora > VIGENCIA_MS) {
+    const promesa = conReintentos(() => Promise.all([getGrafoApi({ borradores, token }), getCategoriesApi()]));
+    cache.set(clave, { hora: Date.now(), promesa });
+    promesa.catch(() => cache.delete(clave));
   }
-  return cache.promesa;
+  return cache.get(clave).promesa;
 }
 
 /**
- * Datos del mapa del procomún: notas publicadas con sus enlaces, la categoría
- * raíz de cada una y un color por raíz.
+ * Datos de la red del procomún: notas con sus enlaces y, para cada una, su
+ * categoría raíz (el grupo en que se dibuja) y la ruta de su categoría.
+ * `borradores`: con sesión, agrega los borradores propios.
  */
-export function useDatosMapa() {
+export function useDatosRed({ borradores = false, token } = {}) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
+  const conBorradores = borradores && !!token;
 
   useEffect(() => {
     let vigente = true;
-    pedirMapa()
-      .then(([grafo, categorias]) => vigente && setDatos({ notas: grafo?.notas || [], categorias: categorias || [] }))
+    setError(null);
+    pedirRed(conBorradores, token)
+      .then(([red, categorias]) => vigente && setDatos({ notas: red?.notas || [], categorias: categorias || [] }))
       .catch((e) => vigente && setError(e.message));
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [conBorradores, token]);
 
   return useMemo(() => {
     if (!datos) return { cargando: !error, error };
     const indice = indiceCategorias(datos.categorias);
+    const categoriaDe = (nota) => indice.porId.get(nota.id_categoria) || null;
     const raizDe = (nota) => {
-      const categoria = indice.porId.get(nota.id_categoria);
-      return categoria ? indice.ruta(categoria)[0] : null;
+      const c = categoriaDe(nota);
+      return c ? indice.ruta(c)[0] : null;
     };
-    // Los colores se reparten entre las raíces que sí tienen notas, para que no se repitan
-    const usadas = new Set(datos.notas.map((n) => raizDe(n)?.id_categoria));
-    const raices = indice.raices.filter((r) => usadas.has(r.id_categoria));
-    const colorDeRaiz = new Map(raices.map((r, i) => [r.id_categoria, PALETA[i % (PALETA.length - 1)]]));
-    const colorDe = (nota) => colorDeRaiz.get(raizDe(nota)?.id_categoria) || PALETA[PALETA.length - 1];
-    return { cargando: false, error: null, notas: datos.notas, raices, raizDe, colorDe, colorDeRaiz };
+    const grupoDe = (nota) => {
+      const r = raizDe(nota);
+      return r ? { id: r.id_categoria, nombre: r.nombre } : null;
+    };
+    const rutaDe = (nota) => {
+      const c = categoriaDe(nota);
+      return c ? indice.ruta(c).map((x) => x.nombre).join(" / ") : "";
+    };
+    return { cargando: false, error: null, notas: datos.notas, grupoDe, rutaDe };
   }, [datos, error]);
 }

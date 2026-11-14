@@ -3,13 +3,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks";
 import { Logo, Icono } from "../../UI";
 import { BotonTema } from "../../Common";
-import { LOGIN_PATH, RUTAS, RUTA_MAPA } from "../../../utils/constants";
+import { LOGIN_PATH, RUTAS } from "../../../utils/constants";
 import "./MenuLateral.css";
 
 // Las entradas del taller, en el orden del diseño F. «Catálogo» sale a la portada pública.
 const ENTRADAS = [
   { a: "/#catalogo", texto: "Catálogo", icono: "catalogo", activa: () => false },
-  { a: RUTA_MAPA, texto: "Red de conocimiento", icono: "mapa", activa: () => false },
+  { a: RUTAS.RED, texto: "Red", icono: "mapa", activa: (p) => p === RUTAS.RED },
   { a: RUTAS.LAB, texto: "Recientes", icono: "recientes", activa: (p) => p === RUTAS.LAB },
   { a: RUTAS.MIS_NOTAS, texto: "Mis notas", icono: "notas", activa: (p) => p === RUTAS.MIS_NOTAS },
   { a: RUTAS.CATEGORIAS, texto: "Categorías", icono: "carpeta", soloStaff: true, activa: (p) => p === RUTAS.CATEGORIAS },

@@ -46,7 +46,7 @@ Frente a la privatización del conocimiento impuesta por monopolios corporativos
 * ⚙️ **Animaciones aisladas:** JavaScript con Anime.js 4 dentro de un `iframe` con `sandbox="allow-scripts"` y una CSP que no deja conectarse a nada. Nada se ejecuta al abrir la nota: el lector pulsa «Reproducir» y puede mover deslizadores (`parametro()`).
 * 🖼️ **Figuras generadas con código:** una celda de animación marcada como figura guarda el SVG que dibujó en el taller del autor; el lector ve una imagen fija con los colores del tema, sin ejecutar nada.
 * 🗂️ **Catálogo jerárquico:** categorías en árbol (con varios padres posibles), categorías extra, etiquetas, búsqueda sin acentos y paginación.
-* 🕸️ **Red de conocimiento:** grafo de todas las notas y sus rutas de estudio («se lee antes de») y derivaciones, al estilo de Obsidian, más la red local de cada nota. El servidor impide los ciclos en las rutas.
+* 🕸️ **Red del procomún:** grafo de todas las notas, agrupadas por categoría, con sus rutas de estudio («se lee antes de») y derivaciones, al estilo de Obsidian; búsqueda, ficha de cada nota y red local numerada en el margen de la lectura. El servidor impide los ciclos en las rutas.
 * 🤝 **Procomún:** cualquiera con cuenta propone correcciones sobre una celda concreta, y deriva su propia versión de una nota con la atribución que exige la licencia.
 * 🖨️ **Impresión y PDF:** cada nota se imprime sola, en colores claros, con demostraciones y (opcionalmente) soluciones abiertas y con la forma de citarla.
 * 📣 **Avisos de la administración:** novedades, mantenimientos, notas importantes y reconocimientos, con vigencia, en una banda del sitio o del taller y en la página «Novedades».
@@ -210,7 +210,7 @@ La API responde solo JSON y tiene documentación interactiva en `/doc/`.
 | `POST /api/auth/login/` · `renovar/` · `salir/` | Público / sesión | Sesiones JWT. |
 | `GET · PATCH · DELETE /api/auth/me/` | Sesión | Mis datos; borrar la cuenta anonimiza lo publicado. |
 | `GET /api/notas/` | Público | Catálogo (`?categoria=`, `?q=`, `?limite=`). |
-| `GET /api/notas/grafo/` | Público | Red de conocimiento: notas publicadas con prerrequisitos y origen. |
+| `GET /api/notas/grafo/` | Público | Red del procomún: notas publicadas con prerrequisitos y origen (`?borradores=1` agrega los propios). |
 | `GET /api/notas/{id}/` | Público / autor | Lectura (solo celdas públicas para lectores). |
 | `GET /api/notas/mias/` | Sesión | Mis notas, con borradores. |
 | `POST · PATCH · DELETE /api/notas/…` | Autor | Crear, editar y borrar notas. |

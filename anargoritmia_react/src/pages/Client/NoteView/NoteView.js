@@ -10,8 +10,7 @@ import {
   DialogoCorreccion,
   EstructuraNota,
   FiguraSvg,
-  GrafoNotas,
-  vecindario,
+  RedLocal,
   MarkdownView,
   TextoEnLinea,
   analizarEstructura,
@@ -19,9 +18,8 @@ import {
   resaltar,
 } from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
-import { LOGIN_PATH, RUTA_MAPA, editarNota, leerNota } from "../../../utils/constants";
+import { LOGIN_PATH, editarNota, leerNota } from "../../../utils/constants";
 import { firmaAutor } from "../../../utils/notas";
-import { useDatosMapa } from "../../../utils/mapa";
 import "./NoteView.css";
 
 const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
@@ -277,6 +275,7 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
           <FilaCelda
             key={bloque.id}
             direccion={direccion}
+            extraMargen={i === 0 && !nota.es_borrador ? <RedLocal idNota={nota.id_documento} /> : null}
             bloque={bloque}
             indice={i}
             numero={numero}
@@ -287,7 +286,6 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
 
       {nota.ruta?.siguen?.length > 0 && <ListaRuta titulo="Para seguir" notas={nota.ruta.siguen} />}
 
-      {!nota.es_borrador && <MapaLocal idNota={nota.id_documento} />}
 
       <footer className="lectura__fila lectura__notas">
         <div className="lectura__margen">
@@ -307,6 +305,11 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
               {nota.titulo || "Nota sin título"}». Anargoritmia. {direccion}
             </li>
             <li>Las ecuaciones se compilan en tu navegador con KaTeX; el servidor no procesa ni registra tu lectura.</li>
+            {!nota.es_borrador && (
+              <li className="lectura__en-pantalla">
+                La red local se arma en tu navegador con los enlaces de esta nota; el servidor no registra tu lectura.
+              </li>
+            )}
             {!auth && !nota.es_borrador && nota.bloques.length > 0 && (
               <li className="lectura__en-pantalla">
                 ¿Encontraste un error?{" "}
@@ -338,7 +341,7 @@ function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, 
   );
 }
 
-function FilaCelda({ bloque, indice, numero, onCorregir, direccion }) {
+function FilaCelda({ bloque, indice, numero, onCorregir, direccion, extraMargen = null }) {
   const { tipo, contenido, lenguaje, version, notas, archivo, titulo } = bloque;
   const nombreTipo = esFigura(bloque) ? "Figura" : TIPOS[tipo];
 
@@ -362,6 +365,7 @@ function FilaCelda({ bloque, indice, numero, onCorregir, direccion }) {
             Señalar un error<span className="solo-lectores"> en la celda {indice + 1}</span>
           </button>
         )}
+        {extraMargen}
       </div>
 
       <div className="lectura__cuerpo">
@@ -542,36 +546,4 @@ function useImpresion(articulo, conSoluciones) {
       window.removeEventListener("afterprint", despues);
     };
   }, [articulo, conSoluciones]);
-}
-
-/** Mapa local: la nota al centro, con sus vecinas a uno o dos pasos (como en Obsidian). */
-function MapaLocal({ idNota }) {
-  const navigate = useNavigate();
-  const { notas, colorDe } = useDatosMapa();
-  const cercanas = useMemo(() => (notas ? vecindario(notas, idNota, 2) : []), [notas, idNota]);
-  if (cercanas.length < 2) return null; // sola, no hay nada que mostrar
-  return (
-    <section className="lectura__fila lectura__mapa" aria-label="Red de esta nota">
-      <div className="lectura__margen">
-        <p className="lectura__versalitas">Red de esta nota</p>
-        <Link to={RUTA_MAPA} className="lectura__editar">
-          Ver la red completa
-        </Link>
-      </div>
-      <div className="lectura__cuerpo">
-        <GrafoNotas
-          key={idNota}
-          notas={cercanas}
-          centro={idNota}
-          colorDe={colorDe}
-          alto={340}
-          zoomConRueda={false}
-          separacion={1.9}
-          largoNombre={26}
-          onAbrir={(id) => id !== idNota && navigate(leerNota(id))}
-          etiqueta="Red de esta nota"
-        />
-      </div>
-    </section>
-  );
 }
