@@ -16,13 +16,13 @@ Tiempo estimado: una hora, la mayor parte esperando a que compilen.
 
 ## 0. Antes de empezar
 
-- [ ] **Sube los cambios a GitHub.** Render y Cloudflare leen el código desde el repositorio, no desde tu computadora. Los cambios de producción (`settings.py` y `gunicorn` en `requirements.txt`) deben estar en `main`:
+- [x] **Sube los cambios a GitHub.** Render y Cloudflare leen el código desde el repositorio, no desde tu computadora. Los cambios de producción (`settings.py` y `gunicorn` en `requirements.txt`) deben estar en `main`:
 
   ```bash
   git push origin main
   ```
 
-- [ ] **Genera una clave secreta nueva para producción** (no reutilices la de tu `.env` local):
+- [x] **Genera una clave secreta nueva para producción** (no reutilices la de tu `.env` local):
 
   ```bash
   python -c "import secrets; print(secrets.token_urlsafe(50))"
@@ -30,9 +30,9 @@ Tiempo estimado: una hora, la mayor parte esperando a que compilen.
 
   Guárdala en un lugar seguro; la vas a pegar en Render. No la subas al repositorio ni la compartas.
 
-- [ ] **Ten a mano tu `MONGO_URI`**, la misma de `anargoritmia_django/anargoritmia/.env`.
+- [x] **Ten a mano tu `MONGO_URI`**, la misma de `anargoritmia_django/anargoritmia/.env`.
 
-- [ ] **Saca un respaldo de la base**, por si acaso (desde `anargoritmia_django/anargoritmia`, con tu entorno activado):
+- [x] **Saca un respaldo de la base**, por si acaso (desde `anargoritmia_django/anargoritmia`, con tu entorno activado):
 
   ```bash
   python manage.py respaldar_mongo

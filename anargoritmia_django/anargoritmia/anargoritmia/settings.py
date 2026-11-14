@@ -138,6 +138,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'usuarios.autenticacion.AutenticacionJWT',
     ),
+    # Solo JSON: la página navegable de DRF arma formularios a partir de un
+    # queryset del ORM, y estas vistas leen MongoDB directamente (sin ORM), así
+    # que al abrir la API en el navegador respondía 500. La documentación
+    # interactiva está en /doc/.
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+    ),
     # Límite de correcciones comunitarias por persona (ver notas/api/correcciones.py)
     'DEFAULT_THROTTLE_RATES': {
         'correcciones': '30/hour',
