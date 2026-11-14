@@ -32,11 +32,24 @@ if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY no está definida en el entorno (.env).")
     SECRET_KEY = 'django-insecure-clave-temporal-desarrollo'
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    ]
 
+def lista_del_entorno(nombre):
+    """Valores separados por comas en una variable de entorno (vacía: lista vacía)."""
+    return [v.strip().rstrip("/") for v in os.getenv(nombre, "").split(",") if v.strip()]
+
+
+# Dominios que el servidor atiende: los locales y, en producción, los de
+# ALLOWED_HOSTS (p. ej. api.midominio.mx). Render define RENDER_EXTERNAL_HOSTNAME
+# con el dominio que asigna (nombre.onrender.com).
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", *lista_del_entorno("ALLOWED_HOSTS")]
+if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
+    ALLOWED_HOSTS.append(os.getenv("RENDER_EXTERNAL_HOSTNAME"))
+
+# Detrás del proxy HTTPS de Render (RENDER=true), Django debe saber que la
+# petición original fue https; si no, las URL absolutas de las portadas salen
+# con http:// y el navegador las bloquea en un sitio https.
+if os.getenv("RENDER") or os.getenv("DETRAS_DE_PROXY") == "True":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
@@ -157,6 +170,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    # En producción, el dominio del cliente (p. ej. https://anargoritmia.pages.dev)
+    *lista_del_entorno("CORS_ORIGENES"),
 ]
 CORS_ALLOW_CREDENTIALS = True
 
