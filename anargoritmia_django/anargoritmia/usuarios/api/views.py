@@ -1,12 +1,12 @@
 from django.contrib.auth.hashers import make_password
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
+from anargoritmia.red import LimitePorAlcance
 from notas.servicios import actualizar_autor, anonimizar_autor
 from usuarios import repositorio, sesiones
 from usuarios.api.serializers import (
@@ -91,6 +91,16 @@ class UserApiViewSet(ViewSet):
     MENSAJE_ULTIMO_ADMIN = (
         "Operación denegada: el sistema debe conservar al menos un administrador activo."
     )
+    MENSAJE_OTRO_ADMIN = (
+        "Un administrador no puede modificar ni eliminar la cuenta de otro administrador. "
+        "Cada quien cambia sus datos desde «Mis datos»; para quitarle el rol a alguien, "
+        "quien administra la base usa el comando quitar_admin."
+    )
+
+    def proteger_admins(self, request, usuario):
+        """Ni contraseña, ni rol, ni desactivar, ni borrar: la cuenta de otro admin es intocable."""
+        if usuario.is_staff and str(usuario.id) != str(request.user.id):
+            raise PermissionDenied(self.MENSAJE_OTRO_ADMIN)
 
     def get_serializer(self, *args, **kwargs):  # para la documentación de la API (drf-yasg)
         return UserSerializer(*args, **kwargs)
@@ -121,6 +131,7 @@ class UserApiViewSet(ViewSet):
 
     def update(self, request, pk=None, partial=False):
         usuario = self._obtener(pk)
+        self.proteger_admins(request, usuario)
         serializer = UserSerializer(usuario, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         datos = serializer.validated_data
@@ -142,6 +153,7 @@ class UserApiViewSet(ViewSet):
 
     def destroy(self, request, pk=None):
         usuario = self._obtener(pk)
+        self.proteger_admins(request, usuario)
         if self.dejaria_sin_admins(usuario, sigue_siendo_admin=False):
             raise ValidationError({"error": self.MENSAJE_ULTIMO_ADMIN})
         repositorio.eliminar(usuario.id)
@@ -230,7 +242,7 @@ class RegistroView(APIView):
     """
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [LimitePorAlcance]
     throttle_scope = "registro"
 
     def post(self, request):

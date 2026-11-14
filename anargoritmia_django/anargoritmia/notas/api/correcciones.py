@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from rest_framework import serializers, status, viewsets, permissions
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
+from anargoritmia.red import LimitePorAlcance
 
 from db import db
 from notas.servicios import autor_de
@@ -289,7 +289,7 @@ class CorreccionViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class LimiteCorrecciones(ScopedRateThrottle):
+class LimiteCorrecciones(LimitePorAlcance):
     """Límite de propuestas por persona (ver DEFAULT_THROTTLE_RATES['correcciones'])."""
 
     def allow_request(self, request, view):

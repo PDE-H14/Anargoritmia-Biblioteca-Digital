@@ -529,3 +529,67 @@
     margin-left: 8px !important;
   }
 }
+
+/* ---- Paginación de «Todas las notas» ---- */
+.paginacion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  font: 700 0.95rem/1 var(--f-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.paginacion ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.paginacion button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 2px solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.paginacion button:hover:not(:disabled),
+.paginacion button:focus-visible {
+  background: var(--fg);
+  color: var(--bg);
+}
+.paginacion__numero[aria-current="page"] {
+  background: var(--fg);
+  color: var(--bg);
+  cursor: default;
+}
+.paginacion__paso:disabled {
+  border-color: var(--line-strong);
+  color: var(--mut);
+  cursor: not-allowed;
+}
+.paginacion__hueco {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  color: var(--mut);
+}
+@media (max-width: 560px) {
+  .paginacion {
+    justify-content: center;
+  }
+  .paginacion ol {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -80,3 +80,199 @@
   overflow-y: hidden;
   padding: 4px 0;
 }
+
+/* ---- Tablas (GFM) ---- */
+.markdown-view table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 1em 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+.markdown-view th,
+.markdown-view td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line-strong);
+  text-align: left;
+  vertical-align: top;
+}
+.markdown-view th {
+  border-bottom: 2px solid currentColor;
+  font-weight: 700;
+}
+.markdown-view thead tr {
+  border-top: 2px solid currentColor;
+}
+.markdown-view tbody tr:last-child td {
+  border-bottom: 2px solid currentColor;
+}
+.markdown-view td[align="center"],
+.markdown-view th[align="center"] {
+  text-align: center;
+}
+.markdown-view td[align="right"],
+.markdown-view th[align="right"] {
+  text-align: right;
+}
+.markdown-view del {
+  opacity: 0.75;
+}
+.markdown-view .contains-task-list {
+  padding-left: 0.4em;
+  list-style: none;
+}
+.markdown-view .task-list-item input {
+  margin-right: 0.5em;
+}
+
+/* Notas al pie */
+.markdown-view .footnotes {
+  margin-top: 2em;
+  padding-top: 0.6em;
+  border-top: 1px solid var(--line-strong);
+  font-size: 0.9em;
+}
+.markdown-view .footnotes .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.markdown-view sup a {
+  text-decoration: none;
+}
+
+/* ---- Cajas: teoremas, definiciones, demostraciones ---- */
+.markdown-view .caja {
+  margin: 1.2em 0;
+  padding: 0.7em 1em 0.8em;
+  border-left: 4px solid currentColor;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+}
+.markdown-view .caja > :last-child {
+  margin-bottom: 0;
+}
+.markdown-view .caja__titulo {
+  margin: 0 0 0.4em;
+}
+.markdown-view .caja--teorema,
+.markdown-view .caja--lema,
+.markdown-view .caja--proposicion,
+.markdown-view .caja--corolario,
+.markdown-view .caja--conjetura {
+  border-left-color: var(--margin);
+}
+/* Como en los libros: el enunciado de un resultado va en cursiva */
+.markdown-view .caja--teorema > :not(.caja__titulo),
+.markdown-view .caja--lema > :not(.caja__titulo),
+.markdown-view .caja--proposicion > :not(.caja__titulo),
+.markdown-view .caja--corolario > :not(.caja__titulo),
+.markdown-view .caja--conjetura > :not(.caja__titulo) {
+  font-style: italic;
+}
+.markdown-view .caja--observacion,
+.markdown-view .caja--ejemplo {
+  border-left-style: dashed;
+  background: none;
+}
+.markdown-view .caja--demostracion {
+  border-left: 1px solid var(--line-strong);
+  background: none;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+}
+.markdown-view .caja--demostracion > summary {
+  cursor: pointer;
+  margin: 0;
+  padding: 0.3em 0;
+}
+.markdown-view .caja--demostracion[open] > summary {
+  margin-bottom: 0.4em;
+}
+.markdown-view .caja__fin {
+  margin: 0;
+  text-align: right;
+}
+.markdown-view .caja--tabla {
+  margin-left: 0;
+  margin-right: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+.markdown-view .caja--tabla table {
+  margin-top: 0.3em;
+}
+
+/* Ecuaciones en bloque numeradas a la derecha: (1), (2)… en toda la nota */
+.markdown-view .ecuacion {
+  position: relative;
+  padding-right: 3.5em;
+}
+.markdown-view .ecuacion > .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.markdown-view .ecuacion::after {
+  content: "(" attr(data-numero) ")";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--f-lectura);
+  font-size: 1.1rem;
+}
+
+/* Referencias cruzadas y citas */
+.markdown-view .referencia,
+.markdown-view .cita {
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.markdown-view .referencia--rota {
+  color: var(--acc);
+  font-family: var(--f-mono);
+  font-size: 0.85em;
+}
+.markdown-view :target {
+  scroll-margin-top: 90px;
+  outline: 2px solid var(--margin);
+  outline-offset: 4px;
+}
+
+/* Bibliografía */
+.markdown-view .referencias {
+  margin: 1.5em 0;
+  font-size: 0.95em;
+}
+.markdown-view .referencias__titulo {
+  margin: 0 0 0.5em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85em;
+}
+.markdown-view .referencias__lista {
+  list-style: none;
+  padding-left: 0;
+}
+.markdown-view .referencias__entrada {
+  position: relative;
+  padding-left: 2.6em;
+  margin-bottom: 0.4em;
+}
+.markdown-view .referencias__entrada::before {
+  content: "[" attr(data-numero) "]";
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
+
+/* Títulos con fórmulas: una sola línea, sin párrafos */
+.texto-en-linea .katex {
+  font-size: 1.05em;
+}

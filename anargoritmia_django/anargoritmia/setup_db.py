@@ -88,7 +88,10 @@ esquema_nota = {
                         "titulo": {"bsonType": "string", "description": "Título del algoritmo o de la animación."},
                         "lenguaje": {"bsonType": "string"},
                         "version": {"bsonType": "string"},
-                        "notas": {"bsonType": "string", "description": "Notas de replicación del código."}
+                        "notas": {"bsonType": "string", "description": "Notas de replicación del código."},
+                        "figura": {"bsonType": "bool", "description": "Animación que se lee como imagen fija."},
+                        "svg": {"bsonType": "string", "description": "Figura generada en el taller (SVG, máx. 200 KB)."},
+                        "svg_codigo": {"bsonType": "string", "description": "Huella del código que generó la figura."}
                     }
                 }
             },

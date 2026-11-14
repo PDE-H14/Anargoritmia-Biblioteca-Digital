@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Boton } from "../../UI";
+import { useTema } from "../../../utils/tema";
 import "./AnimacionAislada.css";
 
 const ALTO_INICIAL = 300;
@@ -11,6 +12,8 @@ const MAX_PASOS = 10000;
 const ESPERA_PARAMETRO_MS = 200;
 // Copia local de Anime.js (scripts/copiar-vendor.js); nunca un CDN
 const URL_ANIME = `${process.env.PUBLIC_URL || ""}/vendor/anime.umd.min.js`;
+// Tope de una figura guardada (el servidor aplica el mismo)
+export const MAX_BYTES_FIGURA = 200_000;
 
 /*
  * La página descarga Anime.js de su propio sitio una sola vez y lo incrusta
@@ -124,7 +127,21 @@ html{overflow:hidden}
     if (e.source !== parent || !e.data) return;
     if (e.data.orden === "pausar") window.anime.engine.pause();
     if (e.data.orden === "reanudar") window.anime.engine.resume();
+    if (e.data.orden === "capturar") capturar();
   });
+  // Figura: copia del primer <svg> de la escena tal como se ve ahora
+  var capturar = function () {
+    var svg = escena.querySelector("svg");
+    if (!svg) { avisar("figura", { error: "La escena no tiene ningún <svg>: dibuja la figura dentro de uno (escena.append(svg))." }); return; }
+    var caja = svg.getBoundingClientRect();
+    var ancho = Math.round(caja.width), alto = Math.round(caja.height);
+    var copia = svg.cloneNode(true);
+    copia.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    if (!copia.getAttribute("viewBox") && ancho && alto) copia.setAttribute("viewBox", "0 0 " + ancho + " " + alto);
+    if (ancho && alto) { copia.setAttribute("width", ancho); copia.setAttribute("height", alto); }
+    ["width", "height", "max-width", "max-height"].forEach(function (p) { copia.style.removeProperty(p); });
+    avisar("figura", new XMLSerializer().serializeToString(copia));
+  };
   var alto = function () { avisar("alto", document.documentElement.scrollHeight); };
   new ResizeObserver(alto).observe(document.body);
 })();
@@ -178,7 +195,7 @@ const mismosParametros = (a, b) =>
  * (pausar, reanudar, reiniciar). Así una nota con un error o un ciclo
  * infinito no afecta a quien solo la abre.
  */
-export function AnimacionAislada({ codigo, titulo = "Animación" }) {
+export function AnimacionAislada({ codigo, titulo = "Animación", onCapturar }) {
   const id = useMemo(() => `animacion-${++contador}`, []);
   const iframeRef = useRef(null);
   const [fase, setFase] = useState("detenida"); // detenida | cargando | corriendo | pausada | error
@@ -191,6 +208,18 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
   const [valores, setValores] = useState({});
   const valoresRef = useRef({});
   const temporizadorRef = useRef(null);
+  // Respuesta del iframe a «capturar» (solo en el taller)
+  const capturadaRef = useRef(null);
+  capturadaRef.current = (detalle) => {
+    if (!onCapturar) return;
+    if (typeof detalle !== "string") {
+      onCapturar(null, String(detalle?.error || "No se pudo guardar la figura."));
+    } else if (new Blob([detalle]).size > MAX_BYTES_FIGURA) {
+      onCapturar(null, `La figura pesa más de ${MAX_BYTES_FIGURA / 1000} KB; simplifícala (menos puntos o elementos).`);
+    } else {
+      onCapturar(detalle, null);
+    }
+  };
 
   useEffect(() => () => clearTimeout(temporizadorRef.current), []);
 
@@ -209,6 +238,7 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
         setFase("error");
         setError(String(datos.detalle).slice(0, 300));
       }
+      if (datos.tipo === "figura") capturadaRef.current?.(datos.detalle);
       if (datos.tipo === "alto" && Number.isFinite(datos.detalle)) {
         setAlto(Math.max(ALTO_INICIAL, Math.min(ALTO_MAXIMO, Math.ceil(datos.detalle))));
       }
@@ -296,6 +326,11 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
             Detener
           </Boton>
         )}
+        {activa && onCapturar && (
+          <Boton variante="secundario" onClick={() => ordenar("capturar")}>
+            Guardar como figura
+          </Boton>
+        )}
         <span className="animacion__estado" aria-live="polite">
           {fase === "pausada" && "En pausa"}
         </span>
@@ -354,6 +389,35 @@ export function AnimacionAislada({ codigo, titulo = "Animación" }) {
           La animación falló: {error}
         </p>
       )}
+    </div>
+  );
+}
+
+// El SVG guardado usa las variables del marco (--fg, --acc...): al mostrarlo
+// se le agregan con los colores del tema actual
+function svgConTema(svg, colores) {
+  const estilo =
+    `<style>svg{--bg:${colores.bg};--fg:${colores.fg};--mut:${colores.mut};--acc:${colores.acc};--line:${colores.line};` +
+    `color:${colores.fg};font:15px/1.4 system-ui,sans-serif}</style>`;
+  return svg.replace(/<svg\b[^>]*>/i, (apertura) => apertura + estilo);
+}
+
+/**
+ * Figura guardada de una celda de animación. Se muestra como <img>: el
+ * navegador dibuja el SVG sin ejecutar scripts ni pedir nada a la red, así
+ * que no corre código del autor al abrir la nota.
+ */
+export function FiguraSvg({ svg, titulo = "Figura" }) {
+  const { tema } = useTema();
+  const fuente = useMemo(
+    () => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgConTema(svg, coloresDelTema()))}`,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [svg, tema]
+  );
+  const medida = svg.match(/<svg\b[^>]*\bwidth="(\d+(?:\.\d+)?)"/i);
+  return (
+    <div className="figura">
+      <img src={fuente} alt={titulo.replace(/[$\\]/g, "")}style={medida ? { maxWidth: `${medida[1]}px` } : undefined} />
     </div>
   );
 }

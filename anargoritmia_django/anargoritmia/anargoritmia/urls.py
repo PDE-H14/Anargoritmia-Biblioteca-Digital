@@ -21,6 +21,8 @@ from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
+from anargoritmia.red import DiagnosticoIPView
+
 schema_view = get_schema_view(
    openapi.Info(
       title="Anargoritmia API",
@@ -40,7 +42,8 @@ urlpatterns = [
     # Entrar, renovar y salir: /api/auth/login|renovar|salir/ (usuarios/api/router.py)
     path("api/", include("usuarios.api.router")),
     path("api/", include("notas.api.router")),
-    path("api/", include("categorias.api.router"))
+    path("api/", include("categorias.api.router")),
+    path("api/diagnostico/ip/", DiagnosticoIPView.as_view()),
 ]
 
 if settings.DEBUG:

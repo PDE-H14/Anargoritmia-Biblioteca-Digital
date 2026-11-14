@@ -7,7 +7,6 @@
   max-width: calc(var(--margen) + var(--hueco) * 2 + 52rem);
   margin: 0 auto;
   padding: 72px 24px 24px;
-  counter-reset: ecuacion; /* numeración continua en toda la nota */
   font-family: var(--f-lectura);
   color: var(--fg);
 }
@@ -165,21 +164,7 @@
   text-align: left;
   font-weight: 700;
 }
-/* Ecuaciones en bloque numeradas a la derecha: (1), (2)… */
-.lectura .katex-display {
-  position: relative;
-  padding-right: 3.5em;
-  counter-increment: ecuacion;
-}
-.lectura .katex-display::after {
-  content: "(" counter(ecuacion) ")";
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-family: var(--f-lectura);
-  font-size: 1.1rem;
-}
+/* El número de las ecuaciones en bloque lo pone MarkdownView (estructura.js) */
 .lectura__vacia {
   color: var(--mut);
   font-style: italic;

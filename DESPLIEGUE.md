@@ -193,3 +193,38 @@ Hazla con las herramientas del navegador abiertas (**F12 → Consola** y **Red**
 - **Respaldos.** La base sigue viviendo solo en Atlas. Corre `python manage.py respaldar_mongo` en local de vez en cuando; los archivos quedan en `respaldos/`, fuera del repositorio.
 - **Límites a vigilar.** Render: 750 horas al mes y 5 GB de salida; si se acaba la salida, el servicio se suspende hasta el mes siguiente. Atlas: 512 MB. Cloudflare Pages: 500 compilaciones al mes, sin límite de transferencia para el cliente.
 - **Dominio propio** (opcional). Se conecta en Cloudflare (*Custom domains*) y en Render (*Settings → Custom Domains*). Después agrégalo a `CORS_ORIGENES` y, el de la API, a `ALLOWED_HOSTS`.
+
+---
+
+## 8. IP real del cliente y cuentas de administración
+
+El límite de registros cuenta por dirección IP. Detrás de Render, la IP del
+cliente llega en encabezados que pone el proxy; el servidor solo confía en los
+que se le indican (`anargoritmia/red.py`):
+
+| Variable | Valor por omisión en Render | Para qué |
+|---|---|---|
+| `IP_ENCABEZADOS` | `CF-Connecting-IP` | Encabezados que el cliente no puede falsificar, separados por comas. Vacía: no confiar en ninguno |
+| `IP_PROXIES` | `0` | Cuántos proxies propios agregan su salto a `X-Forwarded-For` (se toma el que agregó el más externo) |
+| `DIAGNOSTICO_IP` | sin definir | `True` activa `GET /api/diagnostico/ip/`, que muestra a quien la pide qué encabezados llegan con su propia IP |
+
+**Comprobación después de desplegar** (una sola vez):
+
+1. En Render, agrega `DIAGNOSTICO_IP=True` y espera el redespliegue.
+2. Abre `https://anargoritmia-api.onrender.com/api/diagnostico/ip/`. `ip_usada` debe ser tu IP pública y `fuente` debe decir `CF-Connecting-IP`.
+3. Pide lo mismo con un encabezado inventado:
+
+   ```bash
+   curl -H "CF-Connecting-IP: 1.2.3.4" -H "X-Forwarded-For: 5.6.7.8" https://anargoritmia-api.onrender.com/api/diagnostico/ip/
+   ```
+
+   Si `ip_usada` sigue siendo tu IP, el encabezado es de fiar. Si sale `1.2.3.4`, Render no pasa por Cloudflare: cambia `IP_ENCABEZADOS` a vacío y prueba con `IP_PROXIES=1` (debe salir tu IP y no `5.6.7.8`).
+4. Borra `DIAGNOSTICO_IP` al terminar.
+
+**Administradores.** Desde el panel, un admin no puede editar, desactivar,
+degradar ni borrar a otro admin: cada quien cambia sus datos en «Mis datos».
+Para quitarle el rol a alguien se usa la terminal, con el `.env` de producción:
+
+```bash
+python manage.py quitar_admin --alias su_alias
+```

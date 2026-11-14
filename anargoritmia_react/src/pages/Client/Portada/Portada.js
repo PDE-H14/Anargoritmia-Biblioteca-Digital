@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { getCategoriesApi } from "../../../api/category";
+import { conReintentos } from "../../../api/http";
 import { getPublicNotesApi } from "../../../api/note";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
 import { RUTAS, leerNota } from "../../../utils/constants";
@@ -34,6 +35,49 @@ const PRINCIPIOS = [
 const categoriasDe = (nota) => [nota.id_categoria, ...(nota.categorias_extra || [])];
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+const NOTAS_POR_PAGINA = 20;
+
+// Números a mostrar: la primera, la última y las vecinas de la actual; «…» en los huecos
+function paginasVisibles(actual, total) {
+  const numeros = [...new Set([1, actual - 1, actual, actual + 1, total])].filter((n) => n >= 1 && n <= total);
+  return numeros.flatMap((n, i) => (i > 0 && n - numeros[i - 1] > 1 ? ["…", n] : [n]));
+}
+
+function Paginacion({ pagina, total, alCambiar }) {
+  if (total <= 1) return null;
+  return (
+    <nav className="paginacion" aria-label="Páginas del catálogo">
+      <button type="button" className="paginacion__paso" disabled={pagina === 1} onClick={() => alCambiar(pagina - 1)}>
+        ← Anterior
+      </button>
+      <ol>
+        {paginasVisibles(pagina, total).map((n, i) =>
+          n === "…" ? (
+            <li key={`hueco-${i}`} className="paginacion__hueco" aria-hidden="true">
+              …
+            </li>
+          ) : (
+            <li key={n}>
+              <button
+                type="button"
+                className="paginacion__numero"
+                aria-current={n === pagina ? "page" : undefined}
+                aria-label={`Página ${n}`}
+                onClick={() => n !== pagina && alCambiar(n)}
+              >
+                {n}
+              </button>
+            </li>
+          )
+        )}
+      </ol>
+      <button type="button" className="paginacion__paso" disabled={pagina === total} onClick={() => alCambiar(pagina + 1)}>
+        Siguiente →
+      </button>
+    </nav>
+  );
+}
 
 /**
  * Cabecera de la categoría elegida (o de «Todas»). Según el ancho de la
@@ -84,14 +128,21 @@ export function Portada() {
   const [buscando, setBuscando] = useState(false);
   const notaSugerencias = useNotaSugerencias();
 
+  const [despertando, setDespertando] = useState(false);
+
   const cargar = useCallback(() => {
     setError(null);
-    Promise.all([getCategoriesApi(), getPublicNotesApi()])
+    setDespertando(false);
+    // Si el servidor estaba dormido, se reintenta mientras despierta
+    conReintentos(() => Promise.all([getCategoriesApi(), getPublicNotesApi()]), {
+      alReintentar: () => setDespertando(true),
+    })
       .then(([cats, publicadas]) => {
         setCategorias(cats || []);
         setNotas(publicadas || []);
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setDespertando(false));
   }, []);
   useEffect(cargar, [cargar]);
 
@@ -128,8 +179,10 @@ export function Portada() {
       setParametros(
         (actuales) => {
           const siguientes = new URLSearchParams(actuales);
+          if ((siguientes.get(nombre) || "") === (valor || "")) return actuales;
           if (valor) siguientes.set(nombre, valor);
           else siguientes.delete(nombre);
+          siguientes.delete("pagina"); // otra categoría u otra búsqueda: de vuelta a la primera página
           return siguientes;
         },
         { replace: true, preventScrollReset: true }
@@ -137,6 +190,20 @@ export function Portada() {
     },
     [setParametros]
   );
+
+  // La página vive en la URL (?pagina=2) y entra al historial: «atrás» regresa a la anterior
+  const irAPagina = (numero) => {
+    setParametros(
+      (actuales) => {
+        const siguientes = new URLSearchParams(actuales);
+        if (numero > 1) siguientes.set("pagina", String(numero));
+        else siguientes.delete("pagina");
+        return siguientes;
+      },
+      { preventScrollReset: true }
+    );
+    document.getElementById("catalogo-lista")?.scrollIntoView({ block: "start" });
+  };
 
   // Escribir actualiza la URL tras una pausa breve; la URL dispara la búsqueda
   useEffect(() => {
@@ -167,6 +234,10 @@ export function Portada() {
     const ids = abarca(elegida);
     return base.filter((n) => categoriasDe(n).some((id) => ids.has(id)));
   }, [notas, resultados, consulta, elegida, abarca]);
+
+  const totalPaginas = Math.max(1, Math.ceil(notasVisibles.length / NOTAS_POR_PAGINA));
+  const pagina = Math.min(totalPaginas, Math.max(1, parseInt(parametros.get("pagina"), 10) || 1));
+  const notasDePagina = notasVisibles.slice((pagina - 1) * NOTAS_POR_PAGINA, pagina * NOTAS_POR_PAGINA);
 
   const hijas = elegida ? indice.hijasDe(elegida.ficha) : indice.raices;
 
@@ -249,7 +320,13 @@ export function Portada() {
             <Boton onClick={cargar}>Reintentar</Boton>
           </Aviso>
         ) : !notas ? (
-          <Cargando texto="Cargando catálogo…" />
+          <Cargando
+            texto={
+              despertando
+                ? "Despertando al servidor: si nadie lo ha usado en un rato, tarda hasta un par de minutos. No cierres la página…"
+                : "Cargando catálogo…"
+            }
+          />
         ) : (
           <div className="catalogo">
             {/* Solo las raíces; las subcategorías se recorren en la columna principal */}
@@ -394,16 +471,19 @@ export function Portada() {
                     <Link to={RUTAS.CREAR}>Escribe la primera en el taller</Link>.
                   </p>
                 ) : (
-                  <ul className="catalogo__lista">
-                    {notasVisibles.map((n) => (
-                      <li key={n.id_documento}>
-                        <Link to={leerNota(n.id_documento)} className="catalogo__titulo">
-                          {n.titulo}
-                        </Link>
-                        <span className="catalogo__meta">{metaNota(n)}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <ul className="catalogo__lista">
+                      {notasDePagina.map((n) => (
+                        <li key={n.id_documento}>
+                          <Link to={leerNota(n.id_documento)} className="catalogo__titulo">
+                            {n.titulo}
+                          </Link>
+                          <span className="catalogo__meta">{metaNota(n)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Paginacion pagina={pagina} total={totalPaginas} alCambiar={irAPagina} />
+                  </>
                 )}
               </section>
             </div>

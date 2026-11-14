@@ -123,7 +123,9 @@ export async function apiFetch(path, { token, json, ...options } = {}, esReinten
     response = await fetch(`${BASE_API}${path}`, { ...options, headers });
   } catch {
     // Servidor apagado, reiniciándose o sin red: no es un problema de sesión
-    const sinConexion = new Error("No se pudo conectar con el servidor. Revisa tu conexión o que la API esté en marcha.");
+    const sinConexion = new Error(
+      "No se pudo conectar con el servidor. Si nadie lo ha usado en un rato, tarda hasta un par de minutos en despertar: espera y vuelve a intentarlo. Si sigue igual, revisa tu conexión."
+    );
     sinConexion.isApiError = true;
     sinConexion.status = 0;
     throw sinConexion;
@@ -165,4 +167,24 @@ export async function apiFetch(path, { token, json, ...options } = {}, esReinten
   }
 
   return data;
+}
+
+/**
+ * El servidor gratuito se duerme tras 15 minutos sin uso y tarda cerca de un
+ * minuto en despertar. Mientras tanto la petición falla sin respuesta
+ * (status 0) o con 502/503/504: esos casos se reintentan unas veces antes de
+ * mostrar el error. `alReintentar(intento)` permite avisar al lector.
+ */
+export const esServidorDormido = (e) => e?.status === 0 || [502, 503, 504].includes(e?.status);
+
+export async function conReintentos(pedir, { intentos = 5, espera = 15000, alReintentar } = {}) {
+  for (let intento = 1; ; intento++) {
+    try {
+      return await pedir();
+    } catch (e) {
+      if (intento >= intentos || !esServidorDormido(e)) throw e;
+      alReintentar?.(intento);
+      await new Promise((listo) => setTimeout(listo, espera));
+    }
+  }
 }

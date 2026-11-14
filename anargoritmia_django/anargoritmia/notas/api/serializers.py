@@ -1,7 +1,10 @@
+from collections import deque
+
 from rest_framework import serializers
 import re
 import unicodedata
 from db import db
+from notas.figuras import MAX_BYTES_FIGURA, FiguraInvalida, validar_svg
 
 TIPOS_BLOQUE = ("texto", "codigo", "animacion", "ejercicio")
 MAX_PRERREQUISITOS = 5
@@ -71,6 +74,14 @@ class BloqueSerializer(serializers.Serializer):
     solucion = serializers.CharField(
         allow_blank=True, default="", max_length=MAX_CARACTERES_BLOQUE, trim_whitespace=False
     )
+    # Celdas de animación que se leen como imagen fija: el SVG lo genera el
+    # código en el taller del autor y el lector solo ve la imagen
+    figura = serializers.BooleanField(required=False, default=False)
+    svg = serializers.CharField(
+        allow_blank=True, required=False, default="", max_length=MAX_BYTES_FIGURA, trim_whitespace=False
+    )
+    # Huella del código con que se generó la figura (el taller avisa si cambió)
+    svg_codigo = serializers.CharField(allow_blank=True, required=False, default="", max_length=32)
 
     def validate_archivo(self, value):
         value = value.strip()
@@ -82,6 +93,19 @@ class BloqueSerializer(serializers.Serializer):
 
     def validate_titulo(self, value):
         return value.strip()
+
+    def validate(self, datos):
+        # Solo las animaciones pueden ser figuras; en las demás celdas no se guardan esos campos
+        if datos.get("tipo") != "animacion":
+            for campo in ("figura", "svg", "svg_codigo"):
+                datos.pop(campo, None)
+            return datos
+        if datos.get("svg"):
+            try:
+                validar_svg(datos["svg"])
+            except FiguraInvalida as e:
+                raise serializers.ValidationError({"svg": str(e)})
+        return datos
 
 
 class ResumenCeldasSerializer(serializers.Serializer):
@@ -182,7 +206,7 @@ class NotaSerializer(serializers.Serializer):
         return datos
 
     def validate_prerrequisitos(self, value):
-        """Solo notas publicadas, sin repetir y nunca la propia nota."""
+        """Solo notas publicadas, sin repetir, nunca la propia nota y sin cerrar un ciclo."""
         propia = self.context.get('id_documento')
         unicos = list(dict.fromkeys(v.strip() for v in value if v.strip()))
         if propia in unicos:
@@ -198,6 +222,10 @@ class NotaSerializer(serializers.Serializer):
         faltantes = [v for v in unicos if v not in existentes]
         if faltantes:
             raise serializers.ValidationError("Los prerrequisitos deben ser notas publicadas.")
+        if propia:
+            ciclo = camino_hacia(propia, unicos)
+            if ciclo:
+                raise serializers.ValidationError(mensaje_ciclo(ciclo))
         return unicos
 
     def validate_id_categoria(self, value):
@@ -311,3 +339,51 @@ class NotaSerializer(serializers.Serializer):
             errores["bloques"] = "Marca como público al menos un bloque con contenido."
         if errores:
             raise serializers.ValidationError(errores)
+
+
+# --------------------------------------------------------------------------- #
+# Ciclos en las rutas de estudio
+# --------------------------------------------------------------------------- #
+MAX_NOTAS_EN_RUTA = 2000  # tope de la búsqueda: la base nunca debería acercarse
+
+
+def camino_hacia(destino, inicios):
+    """
+    Busca, siguiendo prerrequisitos, un camino de alguna nota de `inicios`
+    hasta `destino`. Si existe, agregar esos prerrequisitos a `destino`
+    cerraría un ciclo. Devuelve la lista de identificadores del camino
+    (desde la nota de `inicios` hasta `destino`) o None.
+    Se recorren los prerrequisitos guardados aunque la nota esté en borrador:
+    si no, el ciclo se colaría cuando esa nota vuelva a publicarse.
+    """
+    previo = {inicio: None for inicio in inicios}
+    pendientes = deque(inicios)
+    while pendientes and len(previo) <= MAX_NOTAS_EN_RUTA:
+        lote = [pendientes.popleft() for _ in range(min(len(pendientes), 100))]
+        for nota in db["Nota"].find({"id_documento": {"$in": lote}}, {"_id": 0, "id_documento": 1, "prerrequisitos": 1}):
+            for siguiente in nota.get("prerrequisitos") or []:
+                if siguiente in previo:
+                    continue
+                previo[siguiente] = nota["id_documento"]
+                if siguiente == destino:
+                    camino = [siguiente]
+                    while previo[camino[-1]] is not None:
+                        camino.append(previo[camino[-1]])
+                    return list(reversed(camino))
+                pendientes.append(siguiente)
+    return None
+
+
+def mensaje_ciclo(camino):
+    """«"Derivadas" ya pide, a través de "Límites", a esta nota.»"""
+    titulos = {
+        n["id_documento"]: n.get("titulo") or "Nota sin título"
+        for n in db["Nota"].find({"id_documento": {"$in": camino}}, {"_id": 0, "id_documento": 1, "titulo": 1})
+    }
+    nombres = [f"«{titulos.get(i, 'Nota sin título')}»" for i in camino[:-1]]
+    intermedias = nombres[1:]
+    via = f", a través de {' y '.join(intermedias) if len(intermedias) < 3 else ', '.join(intermedias)}," if intermedias else ""
+    return (
+        f"{nombres[0]} ya pide{via} a esta nota como prerrequisito: agregarla aquí "
+        "formaría una vuelta sin principio. Quita una de las dos referencias."
+    )

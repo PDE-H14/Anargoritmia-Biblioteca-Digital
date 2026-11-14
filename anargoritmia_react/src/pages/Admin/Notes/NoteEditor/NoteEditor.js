@@ -442,8 +442,16 @@ export function NoteEditor() {
           ))}
           <FilaNueva posicion={bloques.length} onAgregar={agregar} />
           <p className="taller__ayuda">
-            <kbd>Shift</kbd>+<kbd>Enter</kbd> pasa a la siguiente celda · <kbd>Tab</kbd> sangra el código (
-            <kbd>Esc</kbd> y luego <kbd>Tab</kbd> para salir del editor) · Solo las celdas públicas se publican.
+            <kbd>Shift</kbd>+<kbd>Enter</kbd> pasa a la siguiente celda · <kbd>Tab</kbd> sangra y{" "}
+            <kbd>Shift</kbd>+<kbd>Tab</kbd> quita sangría, también en varias líneas seleccionadas (<kbd>Esc</kbd> y
+            luego <kbd>Tab</kbd> para salir del editor) · Solo las celdas públicas se publican.
+          </p>
+          <p className="taller__ayuda">
+            En el texto: tablas con <code>| a | b |</code>, notas al pie con <code>[^1]</code>, cajas como{" "}
+            <code>:::teorema[Nombre]{"{#id}"}</code> … <code>:::</code> (también definicion, lema, corolario,
+            demostracion, ecuacion, tabla…), citas a una caja con <code>[](#id)</code> y a la bibliografía con{" "}
+            <code>[@clave]</code> dentro de un bloque <code>:::referencias</code>. La guía completa está en la nota
+            «Creación de notas».
           </p>
         </section>
 

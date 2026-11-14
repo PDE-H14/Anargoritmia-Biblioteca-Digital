@@ -728,3 +728,121 @@ class CategoriasExtraYEtiquetasTests(MongoAPITestCase):
         self.client.force_authenticate(otra)
         derivada = self.client.post(f"{URL}{nota['id_documento']}/derivar/").data
         self.assertEqual(derivada["categorias_extra"], ["c3"])
+
+
+
+SVG_SIMPLE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--acc)"/></svg>'
+
+
+class CiclosFigurasYAtribucionTests(MongoAPITestCase):
+    """Rutas sin ciclos, figuras de las celdas de animación y atribución de las derivadas."""
+
+    def setUp(self):
+        super().setUp()
+        self.db["Categoria"].insert_one({"id_categoria": "cat-1", "nombre": "Álgebra", "ficha": "algebra"})
+        self.autora = crear_usuario(username="ada", email="ada@example.com", password="x",
+                                    first_name="Ada", last_name="Lovelace", firma="nombre")
+        self.otra = crear_usuario(username="emmy", email="emmy@example.com", password="x")
+        self.client.force_authenticate(self.autora)
+
+    def publicar(self, titulo, bloques=None, **extra):
+        r = self.client.post(URL, {"titulo": titulo, "id_categoria": "cat-1", "es_borrador": False,
+                                   "bloques": bloques or [bloque("b1")], **extra}, format="json")
+        self.assertEqual(r.status_code, 201, r.data)
+        return r.data
+
+    def pedir(self, nota, prerrequisitos):
+        return self.client.patch(f"{URL}{nota['id_documento']}/", {"prerrequisitos": prerrequisitos}, format="json")
+
+    # --- Ciclos -------------------------------------------------------------
+    def test_ciclo_directo_se_rechaza_con_el_camino(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        r = self.pedir(a, [b["id_documento"]])
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("«Derivadas» ya pide", str(r.data["prerrequisitos"]))
+
+    def test_ciclo_de_tres_nombra_la_nota_intermedia(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        c = self.publicar("Taylor", prerrequisitos=[b["id_documento"]])
+        r = self.pedir(a, [c["id_documento"]])
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("a través de «Derivadas»", str(r.data["prerrequisitos"]))
+
+    def test_ciclo_por_una_nota_en_borrador_tambien_se_rechaza(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        c = self.publicar("Taylor", prerrequisitos=[b["id_documento"]])
+        # B vuelve a borrador pero conserva su prerrequisito: al republicarla cerraría la vuelta
+        self.client.patch(f"{URL}{b['id_documento']}/", {"es_borrador": True}, format="json")
+        self.assertEqual(self.pedir(a, [c["id_documento"]]).status_code, 400)
+
+    def test_ramas_sin_vuelta_se_aceptan(self):
+        a = self.publicar("Límites")
+        b = self.publicar("Derivadas", prerrequisitos=[a["id_documento"]])
+        c = self.publicar("Integrales", prerrequisitos=[a["id_documento"]])
+        self.assertEqual(self.pedir(c, [a["id_documento"], b["id_documento"]]).status_code, 200)
+
+    # --- Figuras ------------------------------------------------------------
+    def test_animacion_guarda_su_figura(self):
+        nota = self.publicar("Figuras", [bloque("f1", tipo="animacion", contenido="escena.append(svg)",
+                                                figura=True, svg=SVG_SIMPLE, svg_codigo="abc123")])
+        celda = nota["bloques"][0]
+        self.assertTrue(celda["figura"])
+        self.assertEqual(celda["svg"], SVG_SIMPLE)
+        self.client.force_authenticate(None)
+        lectura = self.client.get(f"{URL}{nota['id_documento']}/").data
+        self.assertEqual(lectura["bloques"][0]["svg"], SVG_SIMPLE)
+
+    def test_figura_invalida_se_rechaza(self):
+        malos = [
+            "<html><body>no</body></html>",
+            "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>",
+            "<svg xmlns='http://www.w3.org/2000/svg'><foreignObject/></svg>",
+            "<!DOCTYPE svg [<!ENTITY a 'x'>]><svg xmlns='http://www.w3.org/2000/svg'>&a;</svg>",
+            "<svg xmlns='http://www.w3.org/2000/svg'><circle></svg>",
+            "<svg xmlns='http://www.w3.org/2000/svg'>" + "<g/>" * 60_000 + "</svg>",
+        ]
+        for svg in malos:
+            r = self.client.post(URL, {"titulo": "X", "bloques": [bloque("f1", tipo="animacion", figura=True, svg=svg)]},
+                                 format="json")
+            self.assertEqual(r.status_code, 400, svg[:40])
+
+    def test_solo_las_animaciones_guardan_figura(self):
+        nota = self.publicar("Texto", [bloque("t1", figura=True, svg=SVG_SIMPLE)])
+        self.assertNotIn("svg", self.db["Nota"].find_one({"id_documento": nota["id_documento"]})["bloques"][0])
+
+    # --- Atribución de las derivadas ----------------------------------------
+    def derivada_de(self, original):
+        self.client.force_authenticate(self.otra)
+        r = self.client.post(f"{URL}{original['id_documento']}/derivar/", format="json")
+        self.client.patch(f"{URL}{r.data['id_documento']}/", {"es_borrador": False}, format="json")
+        return r.data
+
+    def test_derivada_se_anonimiza_al_borrar_la_cuenta_del_origen(self):
+        original = self.publicar("Teorema")
+        derivada = self.derivada_de(original)
+        self.assertEqual(derivada["origen"]["firma"], "Ada Lovelace")
+        self.client.force_authenticate(self.autora)
+        self.assertEqual(self.client.delete("/api/auth/me/", {"password": "x"}, format="json").status_code, 204)
+        guardada = self.db["Nota"].find_one({"id_documento": derivada["id_documento"]})
+        self.assertEqual(guardada["origen"]["firma"], "Comunidad Anargoritmia")
+
+    def test_derivada_sigue_el_cambio_de_firma(self):
+        original = self.publicar("Teorema")
+        derivada = self.derivada_de(original)
+        self.client.force_authenticate(self.autora)
+        self.client.patch("/api/auth/me/", {"firma": "alias"}, format="json")
+        guardada = self.db["Nota"].find_one({"id_documento": derivada["id_documento"]})
+        self.assertEqual(guardada["origen"]["firma"], "ada")
+
+    def test_origen_no_disponible_si_vuelve_a_borrador(self):
+        original = self.publicar("Teorema")
+        derivada = self.derivada_de(original)
+        self.client.force_authenticate(None)
+        self.assertTrue(self.client.get(f"{URL}{derivada['id_documento']}/").data["origen"]["disponible"])
+        self.client.force_authenticate(self.autora)
+        self.client.patch(f"{URL}{original['id_documento']}/", {"es_borrador": True}, format="json")
+        self.client.force_authenticate(None)
+        self.assertFalse(self.client.get(f"{URL}{derivada['id_documento']}/").data["origen"]["disponible"])

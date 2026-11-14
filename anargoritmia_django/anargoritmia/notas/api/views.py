@@ -265,6 +265,13 @@ class NotaViewSet(viewsets.GenericViewSet):
 
         nota["ruta"] = ruta_de_estudio(nota)
 
+        # La nota de origen pudo volver a borrador o borrarse con la cuenta de su autor
+        if nota.get("origen"):
+            publicada = db["Nota"].find_one(
+                {"id_documento": nota["origen"].get("id_documento"), "es_borrador": False}, {"_id": 1}
+            )
+            nota["origen"] = {**nota["origen"], "disponible": publicada is not None}
+
         if editable and request.query_params.get('vista') != 'publica':
             nota.setdefault("celdas", resumen_celdas(nota.get("bloques", [])))
             return self.serializar(nota)

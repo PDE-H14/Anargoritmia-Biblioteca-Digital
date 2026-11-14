@@ -1,16 +1,50 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import { useAuth } from "../../../hooks";
+import { conReintentos } from "../../../api/http";
 import { derivarNotaApi, getNoteApi } from "../../../api/note";
-import { AnimacionAislada, DialogoCorreccion, MarkdownView, expresionDe, resaltar } from "../../../components/Notes";
+import {
+  AnimacionAislada,
+  DialogoCorreccion,
+  EstructuraNota,
+  FiguraSvg,
+  MarkdownView,
+  TextoEnLinea,
+  analizarEstructura,
+  expresionDe,
+  resaltar,
+} from "../../../components/Notes";
 import { Aviso, Boton, Cargando } from "../../../components/UI";
 import { LOGIN_PATH, editarNota, leerNota } from "../../../utils/constants";
 import { firmaAutor } from "../../../utils/notas";
 import "./NoteView.css";
 
 const TIPOS = { texto: "Texto", codigo: "Código", animacion: "Animación", ejercicio: "Ejercicio" };
+
+// Una celda de animación con figura guardada se lee como imagen fija
+export const esFigura = (bloque) => bloque.tipo === "animacion" && bloque.figura && !!bloque.svg;
+
+// Textos con Markdown de la nota, en orden de lectura (para numerar en toda la nota)
+export function textosDeLaNota(bloques) {
+  const campos = { texto: ["contenido"], ejercicio: ["contenido", "pista", "solucion"], codigo: ["notas"] };
+  return bloques.flatMap((b) =>
+    (campos[b.tipo] || []).filter((c) => b[c]?.trim()).map((c) => ({ clave: `${b.id}:${c}`, texto: b[c] }))
+  );
+}
+
+// Título de una figura, ejercicio o algoritmo: con fórmulas y con punto final
+function TituloCelda({ titulo }) {
+  if (!titulo) return null;
+  return (
+    <>
+      {" "}
+      <TextoEnLinea>{titulo}</TextoEnLinea>
+      {/[.!?]$/.test(titulo) ? "" : "."}
+    </>
+  );
+}
 
 /**
  * Lectura (diseño F): solo celdas públicas (el servidor filtra las privadas).
@@ -27,17 +61,24 @@ export function NoteView() {
   const [error, setError] = useState(null);
   // Celda sobre la que se propone una corrección (null: diálogo cerrado)
   const [corrigiendo, setCorrigiendo] = useState(null);
+  const [despertando, setDespertando] = useState(false);
 
   useEffect(() => {
     setNota(null);
     setError(null);
-    getNoteApi(id, auth?.token, { vistaPublica: !!auth })
+    let vigente = true;
+    conReintentos(() => getNoteApi(id, auth?.token, { vistaPublica: !!auth }), {
+      alReintentar: () => vigente && setDespertando(true),
+    })
       .then((datos) => {
+        if (!vigente) return;
         setNota(datos);
         document.title = `${datos.titulo || "Nota sin título"} · Anargoritmia`;
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => vigente && setError(e.message))
+      .finally(() => vigente && setDespertando(false));
     return () => {
+      vigente = false;
       document.title = "Anargoritmia";
     };
   }, [id, auth]);
@@ -52,7 +93,34 @@ export function NoteView() {
       </div>
     );
   }
-  if (!nota) return <Cargando texto="Cargando nota…" />;
+  if (!nota) {
+    return (
+      <Cargando
+        texto={
+          despertando
+            ? "Despertando al servidor: si nadie lo ha usado en un rato, tarda hasta un par de minutos…"
+            : "Cargando nota…"
+        }
+      />
+    );
+  }
+  return (
+    <LecturaNota
+      nota={nota}
+      auth={auth}
+      location={location}
+      navigate={navigate}
+      derivando={derivando}
+      setDerivando={setDerivando}
+      corrigiendo={corrigiendo}
+      setCorrigiendo={setCorrigiendo}
+    />
+  );
+}
+
+function LecturaNota({ nota, auth, location, navigate, derivando, setDerivando, corrigiendo, setCorrigiendo }) {
+  // Numeración, referencias cruzadas y bibliografía de toda la nota
+  const estructura = useMemo(() => analizarEstructura(textosDeLaNota(nota.bloques)), [nota.bloques]);
 
   const esAutor = auth && nota.autor?.id_usuario === String(auth.me?.id);
   const autoria = firmaAutor(nota.autor) || "Autoría comunitaria";
@@ -77,9 +145,11 @@ export function NoteView() {
 
   let algoritmos = 0;
   let animaciones = 0;
+  let figuras = 0;
   let ejercicios = 0;
 
   return (
+    <EstructuraNota.Provider value={estructura}>
     <article className="lectura">
       {nota.es_borrador && (
         <div className="lectura__fila">
@@ -151,8 +221,14 @@ export function NoteView() {
           {nota.origen && (
             <p className="lectura__origen">
               Basada en{" "}
-              <Link to={leerNota(nota.origen.id_documento)}>«{nota.origen.titulo || "Nota sin título"}»</Link> de{" "}
-              {nota.origen.firma || "autoría comunitaria"}.
+              {nota.origen.disponible === false ? (
+                <>
+                  «{nota.origen.titulo || "Nota sin título"}» <span className="lectura__tenue">(ya no está disponible)</span>
+                </>
+              ) : (
+                <Link to={leerNota(nota.origen.id_documento)}>«{nota.origen.titulo || "Nota sin título"}»</Link>
+              )}{" "}
+              de {nota.origen.firma || "autoría comunitaria"}.
             </p>
           )}
         </div>
@@ -174,7 +250,7 @@ export function NoteView() {
       {nota.bloques.map((bloque, i) => {
         const contadores = {
           codigo: () => ++algoritmos,
-          animacion: () => ++animaciones,
+          animacion: () => (esFigura(bloque) ? ++figuras : ++animaciones),
           ejercicio: () => ++ejercicios,
         };
         const numero = contadores[bloque.tipo]?.() ?? null;
@@ -232,17 +308,19 @@ export function NoteView() {
         />
       )}
     </article>
+    </EstructuraNota.Provider>
   );
 }
 
 function FilaCelda({ bloque, indice, numero, onCorregir }) {
   const { tipo, contenido, lenguaje, version, notas, archivo, titulo } = bloque;
+  const nombreTipo = esFigura(bloque) ? "Figura" : TIPOS[tipo];
 
   return (
-    <section className="lectura__fila" aria-label={`Celda ${indice + 1}: ${TIPOS[tipo]}`}>
+    <section className="lectura__fila" aria-label={`Celda ${indice + 1}: ${nombreTipo}`}>
       <div className="lectura__margen">
         <p className="lectura__versalitas">
-          Celda {indice + 1} · {TIPOS[tipo]}
+          Celda {indice + 1} · {nombreTipo}
         </p>
         {archivo && <p className="lectura__archivo">{archivo}</p>}
         {tipo === "codigo" && (
@@ -261,28 +339,36 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
       </div>
 
       <div className="lectura__cuerpo">
-        {tipo === "texto" && <MarkdownView className="lectura__texto">{contenido}</MarkdownView>}
+        {tipo === "texto" && (
+          <MarkdownView className="lectura__texto" clave={`${bloque.id}:contenido`}>
+            {contenido}
+          </MarkdownView>
+        )}
 
         {tipo === "ejercicio" && (
           <section className="lectura__ejercicio" aria-label={`Ejercicio ${numero}`}>
             <p className="lectura__ejercicio-titulo">
               <strong>Ejercicio {numero}.</strong>
               {/* «Ejercicio 1» como título repetiría la numeración automática */}
-              {titulo &&
-                !/^ejercicio\s*\d*\s*\.?$/i.test(titulo.trim()) &&
-                ` ${titulo}${/[.!?]$/.test(titulo) ? "" : "."}`}
+              {titulo && !/^ejercicio\s*\d*\s*\.?$/i.test(titulo.trim()) && <TituloCelda titulo={titulo} />}
             </p>
-            <MarkdownView className="lectura__texto">{contenido}</MarkdownView>
+            <MarkdownView className="lectura__texto" clave={`${bloque.id}:contenido`}>
+              {contenido}
+            </MarkdownView>
             {bloque.pista?.trim() && (
               <details className="lectura__plegable">
                 <summary>Ver una pista</summary>
-                <MarkdownView className="lectura__texto">{bloque.pista}</MarkdownView>
+                <MarkdownView className="lectura__texto" clave={`${bloque.id}:pista`}>
+                  {bloque.pista}
+                </MarkdownView>
               </details>
             )}
             {bloque.solucion?.trim() && (
               <details className="lectura__plegable">
                 <summary>Ver la solución</summary>
-                <MarkdownView className="lectura__texto">{bloque.solucion}</MarkdownView>
+                <MarkdownView className="lectura__texto" clave={`${bloque.id}:solucion`}>
+                  {bloque.solucion}
+                </MarkdownView>
               </details>
             )}
           </section>
@@ -292,12 +378,20 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
           <figure className="lectura__algoritmo">
             <figcaption>
               <strong>
-                {tipo === "codigo" ? "Algoritmo" : "Animación"} {numero}.
+                {tipo === "codigo" ? "Algoritmo" : esFigura(bloque) ? "Figura" : "Animación"} {numero}.
               </strong>
-              {titulo && ` ${titulo}${/[.!?]$/.test(titulo) ? "" : "."}`}
+              <TituloCelda titulo={titulo} />
               {tipo === "codigo" && lenguaje && ` En ${lenguaje}.`}
             </figcaption>
-            {tipo === "animacion" ? (
+            {esFigura(bloque) ? (
+              <>
+                <FiguraSvg svg={bloque.svg} titulo={titulo || `Figura ${numero}`} />
+                <details className="lectura__fuente">
+                  <summary>Ver el código que la genera</summary>
+                  <CodigoNumerado contenido={contenido} lenguaje="javascript" />
+                </details>
+              </>
+            ) : tipo === "animacion" ? (
               <>
                 <AnimacionAislada codigo={contenido} titulo={titulo || `Animación ${numero}`} />
                 <details className="lectura__fuente">
@@ -313,7 +407,7 @@ function FilaCelda({ bloque, indice, numero, onCorregir }) {
 
         {tipo === "codigo" && notas?.trim() && (
           <div className="lectura__replicacion">
-            <em>Notas de replicación.</em> <MarkdownView>{notas}</MarkdownView>
+            <em>Notas de replicación.</em> <MarkdownView clave={`${bloque.id}:notas`}>{notas}</MarkdownView>
           </div>
         )}
 

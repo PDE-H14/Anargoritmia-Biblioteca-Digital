@@ -63,6 +63,8 @@ export function DialogoConfirmacion({
   textoConfirmar = "Confirmar",
   textoCancelar = "Cancelar",
   destructivo = false,
+  // false deja el botón de confirmar desactivado (p. ej. hasta escribir el alias)
+  confirmable = true,
   onConfirmar,
   onCerrar,
 }) {
@@ -95,7 +97,7 @@ export function DialogoConfirmacion({
           <Boton variante="secundario" onClick={onCerrar} disabled={cargando}>
             {textoCancelar}
           </Boton>
-          <Boton variante={destructivo ? "destructivo" : "principal"} cargando={cargando} onClick={confirmar}>
+          <Boton variante={destructivo ? "destructivo" : "principal"} cargando={cargando} disabled={!confirmable} onClick={confirmar}>
             {textoConfirmar}
           </Boton>
         </>

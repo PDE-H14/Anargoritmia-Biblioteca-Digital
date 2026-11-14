@@ -1,7 +1,15 @@
 import React from "react";
+import { toast } from "react-toastify";
 import { Icono } from "../../../../components/UI";
-import { AnimacionAislada, MarkdownView } from "../../../../components/Notes";
+import { AnimacionAislada, FiguraSvg, MarkdownView } from "../../../../components/Notes";
 import { PozoCodigo } from "./PozoCodigo";
+
+// Huella del código con que se guardó una figura: si el código cambia, se avisa
+export function huellaDe(texto = "") {
+  let h = 5381;
+  for (let i = 0; i < texto.length; i++) h = ((h << 5) + h + texto.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16);
+}
 
 export const TIPOS = {
   texto: "Texto",
@@ -168,6 +176,7 @@ export function Celda({
             etiqueta={`Fuente Markdown de la celda ${indice + 1}`}
             placeholder={"Markdown y matemáticas:\n$e^{i\\pi}+1=0$  o  $$\\int_0^1 x\\,dx$$"}
             onSiguiente={siguiente}
+            sangrar
           />
           <div className="celda__vivo">
             <p className="celda__vivo-etiqueta">Vista en vivo</p>
@@ -301,8 +310,54 @@ export function Celda({
             onSiguiente={siguiente}
           />
           <div className="celda__prueba">
+            <label className="celda__casilla">
+              <input
+                type="checkbox"
+                checked={!!bloque.figura}
+                onChange={(e) => cambiar({ figura: e.target.checked })}
+              />
+              Es una figura: el lector ve una imagen fija, sin reproducir nada
+            </label>
             <p className="celda__vivo-etiqueta">Prueba</p>
-            <AnimacionAislada codigo={contenido} titulo={titulo || `Animación de la celda ${indice + 1}`} />
+            <AnimacionAislada
+              codigo={contenido}
+              titulo={titulo || `Animación de la celda ${indice + 1}`}
+              onCapturar={
+                bloque.figura
+                  ? (svg, error) => {
+                      if (error) toast.error(error);
+                      else {
+                        cambiar({ svg, svg_codigo: huellaDe(contenido) });
+                        toast.success("Figura guardada. Así la verá el lector.");
+                      }
+                    }
+                  : undefined
+              }
+            />
+            {bloque.figura && (
+              <div className="celda__figura">
+                <p className="celda__vivo-etiqueta">Figura que verá el lector</p>
+                {bloque.svg ? (
+                  <>
+                    {bloque.svg_codigo !== huellaDe(contenido) && (
+                      <p className="celda__aviso celda__aviso--alerta" role="status">
+                        Cambiaste el código después de guardar la figura: reprodúcelo y vuelve a pulsar «Guardar como
+                        figura».
+                      </p>
+                    )}
+                    <FiguraSvg svg={bloque.svg} titulo={titulo || "Figura"} />
+                    <button type="button" className="celda__enlace" onClick={() => cambiar({ svg: "", svg_codigo: "" })}>
+                      Quitar la figura guardada
+                    </button>
+                  </>
+                ) : (
+                  <p className="celda__aviso">
+                    Pulsa «Reproducir» y, cuando la escena se vea como quieres, «Guardar como figura». Se guarda el primer{" "}
+                    <code>&lt;svg&gt;</code> de la escena (hasta 200 KB). Mientras no la guardes, el lector verá la animación.
+                  </p>
+                )}
+              </div>
+            )}
             <p className="celda__aviso">
               Dibuja dentro de <code>escena</code>. Tienes a mano <code>animate</code>, <code>createTimeline</code>,{" "}
               <code>stagger</code> y el resto de Anime.js, y los colores del tema en <code>var(--fg)</code>,{" "}
@@ -330,6 +385,7 @@ function MarkdownDividido({ valor, onCambio, etiqueta, placeholder, onSiguiente,
         etiqueta={etiqueta}
         placeholder={placeholder}
         onSiguiente={onSiguiente}
+        sangrar
       />
       <div className="celda__vivo">
         <p className="celda__vivo-etiqueta">Vista en vivo</p>

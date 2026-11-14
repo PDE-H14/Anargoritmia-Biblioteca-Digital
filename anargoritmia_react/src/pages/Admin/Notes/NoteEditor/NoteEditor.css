@@ -638,3 +638,44 @@
     border-top: 1px solid var(--line);
   }
 }
+
+/* ---- Figura de una celda de animación ---- */
+.celda__casilla {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.celda__casilla input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--fg);
+}
+.celda__figura {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.celda__prueba .celda__aviso--alerta {
+  padding: 8px 12px;
+  border-left: 3px solid var(--warn);
+  background: var(--warn-bg);
+  color: var(--fg);
+}
+.celda__enlace {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.taller__ayuda code {
+  font-family: var(--f-mono);
+  font-size: 0.9em;
+}

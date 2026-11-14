@@ -51,6 +51,16 @@ if os.getenv("RENDER_EXTERNAL_HOSTNAME"):
 if os.getenv("RENDER") or os.getenv("DETRAS_DE_PROXY") == "True":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# IP real del cliente para los límites de peticiones (ver anargoritmia/red.py).
+# En Render, el tráfico entra por Cloudflare, que pone CF-Connecting-IP y
+# reemplaza el que mande el cliente. Se puede cambiar con IP_ENCABEZADOS
+# (vacío para no confiar en ninguno) e IP_PROXIES.
+IP_ENCABEZADOS = lista_del_entorno("IP_ENCABEZADOS") if "IP_ENCABEZADOS" in os.environ else (
+    ["CF-Connecting-IP"] if os.getenv("RENDER") else []
+)
+IP_PROXIES = int(os.getenv("IP_PROXIES", "0") or 0)
+DIAGNOSTICO_IP = os.getenv("DIAGNOSTICO_IP") == "True"
+
 
 # Application definition
 

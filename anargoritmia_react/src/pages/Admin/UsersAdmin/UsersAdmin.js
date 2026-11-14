@@ -16,6 +16,12 @@ export function UsersAdmin() {
   const [error, setError] = useState(null);
   const [formulario, setFormulario] = useState(null); // { usuario? }
   const [porEliminar, setPorEliminar] = useState(null);
+  // Para borrar hay que escribir el alias exacto de la cuenta
+  const [aliasEscrito, setAliasEscrito] = useState("");
+  const pedirBorrado = (u) => {
+    setAliasEscrito("");
+    setPorEliminar(u);
+  };
 
   const cargar = useCallback(() => {
     setError(null);
@@ -76,6 +82,8 @@ export function UsersAdmin() {
             <tbody>
               {usuarios.map((u) => {
                 const soyYo = u.id === auth.me?.id;
+                // La cuenta de otro admin no se toca desde el panel (el servidor responde 403)
+                const otroAdmin = u.is_staff && !soyYo;
                 const nombre = [u.first_name, u.last_name].filter(Boolean).join(" ");
                 return (
                   <tr key={u.id}>
@@ -92,15 +100,24 @@ export function UsersAdmin() {
                       <SiNo valor={u.is_staff} />
                     </td>
                     <td className="tabla__acciones">
-                      <Boton variante="enlace" onClick={() => setFormulario({ usuario: u })} aria-label={`Editar a @${u.username}`}>
-                        Editar
-                      </Boton>
-                      {soyYo ? (
+                      {otroAdmin ? (
+                        <span
+                          className="usuarios__nota"
+                          title="Un administrador no puede modificar ni eliminar a otro. Para quitarle el rol, quien administra la base usa el comando quitar_admin."
+                        >
+                          Administrador: sin cambios
+                        </span>
+                      ) : (
+                        <Boton variante="enlace" onClick={() => setFormulario({ usuario: u })} aria-label={`Editar a @${u.username}`}>
+                          Editar
+                        </Boton>
+                      )}
+                      {otroAdmin ? null : soyYo ? (
                         <span className="usuarios__nota" title="Tu propia cuenta se elimina desde Mis datos">
                           Desde Mis datos
                         </span>
                       ) : (
-                        <Boton variante="enlace-peligro" onClick={() => setPorEliminar(u)} aria-label={`Eliminar a @${u.username}`}>
+                        <Boton variante="enlace-peligro" onClick={() => pedirBorrado(u)} aria-label={`Eliminar a @${u.username}`}>
                           Eliminar
                         </Boton>
                       )}
@@ -131,6 +148,7 @@ export function UsersAdmin() {
         titulo="Eliminar usuario"
         destructivo
         textoConfirmar="Eliminar usuario"
+        confirmable={!!porEliminar && aliasEscrito.trim() === porEliminar.username}
         onCerrar={() => setPorEliminar(null)}
         onConfirmar={eliminar}
       >
@@ -138,6 +156,14 @@ export function UsersAdmin() {
           ¿Eliminar a <strong>@{porEliminar?.username}</strong> ({porEliminar?.email})? Sus borradores se borran y sus
           notas publicadas pasan a la autoría de la comunidad. No se puede deshacer.
         </p>
+        <Campo id="confirmar-alias" etiqueta={`Para confirmar, escribe su alias: ${porEliminar?.username ?? ""}`}>
+          <input
+            autoComplete="off"
+            spellCheck={false}
+            value={aliasEscrito}
+            onChange={(e) => setAliasEscrito(e.target.value)}
+          />
+        </Campo>
       </DialogoConfirmacion>
     </>
   );

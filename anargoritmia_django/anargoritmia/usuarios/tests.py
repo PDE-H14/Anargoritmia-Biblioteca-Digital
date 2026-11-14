@@ -1,3 +1,4 @@
+import io
 from anargoritmia.pruebas_mongo import MongoAPITestCase as APITestCase
 
 from usuarios import repositorio
@@ -390,3 +391,79 @@ class MigracionSqliteTests(APITestCase):
         self.assertIn("ids 99", salida)
         self.assertEqual(repositorio.obtener("1").username, "otra")
         self.assertIsNone(repositorio.obtener("15"))
+
+
+
+class AdminContraAdminTests(APITestCase):
+    """Un admin no modifica ni borra a otro admin; a los usuarios comunes, sí."""
+
+    def setUp(self):
+        super().setUp()
+        self.admin = crear_usuario(username="admin", email="admin@example.com", password="x", is_staff=True)
+        self.otro_admin = crear_usuario(username="admin2", email="admin2@example.com", password="clave-2", is_staff=True)
+        self.alumno = crear_usuario(username="alumno", email="alumno@example.com", password="x")
+        self.client.force_authenticate(self.admin)
+
+    def url(self, usuario):
+        return f"/api/usuarios/{usuario.id}/"
+
+    def test_no_toca_a_otro_admin(self):
+        intentos = [
+            {"password": "nueva-clave-segura-1"},
+            {"is_active": False},
+            {"is_staff": False},
+            {"username": "renombrado"},
+        ]
+        for datos in intentos:
+            self.assertEqual(self.client.patch(self.url(self.otro_admin), datos, format="json").status_code, 403, datos)
+        self.assertEqual(self.client.delete(self.url(self.otro_admin)).status_code, 403)
+        self.otro_admin.recargar()
+        self.assertTrue(self.otro_admin.is_staff and self.otro_admin.is_active)
+        self.assertTrue(self.otro_admin.check_password("clave-2"))
+
+    def test_si_gestiona_usuarios_comunes(self):
+        self.assertEqual(self.client.patch(self.url(self.alumno), {"is_active": False}, format="json").status_code, 200)
+        self.assertEqual(self.client.delete(self.url(self.alumno)).status_code, 204)
+
+    def test_puede_cambiarse_a_si_mismo(self):
+        self.assertEqual(self.client.patch(self.url(self.admin), {"first_name": "Ana"}, format="json").status_code, 200)
+
+    def test_comando_quitar_admin(self):
+        from django.core.management import call_command
+        call_command("quitar_admin", alias="admin2", stdout=io.StringIO())
+        self.otro_admin.recargar()
+        self.assertFalse(self.otro_admin.is_staff)
+
+
+class LimiteRegistroPorIPTests(APITestCase):
+    """Un X-Forwarded-For inventado no salta el límite de registros."""
+
+    URL = "/api/auth/registro/"
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+        cache.clear()
+
+    def registrar(self, n, **encabezados):
+        datos = {"username": f"persona{n}", "email": f"p{n}@example.com", "password": "una-clave-larga-2026"}
+        return self.client.post(self.URL, datos, format="json", **encabezados)
+
+    def test_encabezado_falso_no_cambia_la_ip(self):
+        from django.test import override_settings
+        with override_settings(IP_ENCABEZADOS=[], IP_PROXIES=0):
+            codigos = [self.registrar(n, HTTP_X_FORWARDED_FOR=f"10.0.0.{n}").status_code for n in range(11)]
+        self.assertEqual(codigos[:10], [201] * 10)
+        self.assertEqual(codigos[10], 429)
+
+    def test_ip_del_encabezado_de_confianza(self):
+        from django.test import override_settings
+        from rest_framework.test import APIRequestFactory
+        from anargoritmia.red import ip_del_cliente
+        peticion = APIRequestFactory().get("/", HTTP_CF_CONNECTING_IP="1.2.3.4", HTTP_X_FORWARDED_FOR="9.9.9.9, 5.6.7.8")
+        with override_settings(IP_ENCABEZADOS=["CF-Connecting-IP"], IP_PROXIES=0):
+            self.assertEqual(ip_del_cliente(peticion)[0], "1.2.3.4")
+        with override_settings(IP_ENCABEZADOS=[], IP_PROXIES=1):
+            self.assertEqual(ip_del_cliente(peticion)[0], "5.6.7.8")
+        with override_settings(IP_ENCABEZADOS=[], IP_PROXIES=0):
+            self.assertEqual(ip_del_cliente(peticion)[0], "127.0.0.1")
